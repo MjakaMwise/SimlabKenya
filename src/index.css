@@ -1,0 +1,240 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@layer base {
+  :root {
+    /* SIM-Lab Brand Colors */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    /* Deep Blue - Primary */
+    --primary: 199 79% 25%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Light Blue/Cyan - Secondary */
+    --secondary: 199 70% 62%;
+    --secondary-foreground: 0 0% 100%;
+
+    /* Muted */
+    --muted: 199 20% 95%;
+    --muted-foreground: 199 30% 40%;
+
+    /* Yellow/Gold - Accent for CTAs */
+    --accent: 43 97% 53%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 199 30% 85%;
+    --input: 199 30% 85%;
+    --ring: 199 79% 25%;
+
+    --radius: 0.75rem;
+
+    /* Custom SIM-Lab colors */
+    --simlab-deep-blue: 199 79% 25%;
+    --simlab-light-blue: 199 70% 62%;
+    --simlab-gold: 43 97% 53%;
+    --simlab-dark: 199 79% 15%;
+    --simlab-navy: 199 85% 12%;
+
+    /* Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(199 79% 25% / 0.95) 0%, hsl(199 85% 18% / 0.9) 100%);
+    --gradient-cta: linear-gradient(135deg, hsl(43 97% 53%) 0%, hsl(38 95% 48%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(199 20% 98%) 100%);
+
+    /* Shadows */
+    --shadow-card: 0 10px 40px -10px hsl(199 79% 25% / 0.15);
+    --shadow-button: 0 4px 20px -4px hsl(43 97% 53% / 0.5);
+    --shadow-nav: 0 4px 30px -10px hsl(199 79% 25% / 0.1);
+
+    /* Sidebar tokens */
+    --sidebar-background: 199 79% 15%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 43 97% 53%;
+    --sidebar-primary-foreground: 0 0% 10%;
+    --sidebar-accent: 199 70% 62%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 199 60% 30%;
+    --sidebar-ring: 43 97% 53%;
+  }
+
+  .dark {
+    --background: 199 85% 8%;
+    --foreground: 0 0% 98%;
+
+    --card: 199 79% 12%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 199 79% 12%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 43 97% 53%;
+    --primary-foreground: 0 0% 10%;
+
+    --secondary: 199 70% 62%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 199 40% 20%;
+    --muted-foreground: 199 20% 70%;
+
+    --accent: 43 97% 53%;
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 199 40% 25%;
+    --input: 199 40% 25%;
+    --ring: 43 97% 53%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Open Sans', system-ui, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Montserrat', system-ui, sans-serif;
+  }
+}
+
+@layer components {
+  /* Hero overlay for images */
+  .hero-overlay {
+    background: var(--gradient-hero);
+  }
+
+  /* Yellow dotted separator */
+  .dotted-separator {
+    @apply flex items-center justify-center gap-1.5 py-4;
+  }
+
+  .dotted-separator::before,
+  .dotted-separator::after {
+    content: '• • • • •';
+    @apply text-accent tracking-widest text-sm;
+  }
+
+  /* Card hover effect */
+  .card-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+
+  .card-hover:hover {
+    @apply -translate-y-2;
+    box-shadow: var(--shadow-card);
+  }
+
+  /* CTA button glow */
+  .btn-glow {
+    box-shadow: var(--shadow-button);
+    @apply transition-all duration-300;
+  }
+
+  .btn-glow:hover {
+    box-shadow: 0 6px 30px -4px hsl(43 97% 53% / 0.6);
+    @apply scale-105;
+  }
+
+  /* Diagonal section divider */
+  .diagonal-top {
+    clip-path: polygon(0 5%, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .diagonal-bottom {
+    clip-path: polygon(0 0, 100% 0, 100% 95%, 0 100%);
+  }
+
+  /* Counter animation */
+  .counter-value {
+    @apply font-bold text-accent;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  /* Liquid fill animation for loading */
+  @keyframes liquidFill {
+    0% { height: 0%; }
+    100% { height: 60%; }
+  }
+
+  @keyframes bubbleUp {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.8; }
+    50% { transform: translateY(-10px) scale(1.2); opacity: 1; }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-liquid-fill {
+    animation: liquidFill 1.5s ease-out forwards;
+  }
+
+  .animate-bubble {
+    animation: bubbleUp 1s ease-in-out infinite;
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+  }
+
+  /* Glass effect */
+  .glass {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
+
+  /* Section spacing */
+  .section-padding {
+    @apply py-16 md:py-24 lg:py-32;
+  }
+
+  /* Container max width */
+  .container-custom {
+    @apply max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
+@layer utilities {
+  /* Text gradient */
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(199 70% 62%) 0%, hsl(43 97% 53%) 100%);
+  }
+
+  /* Background patterns */
+  .bg-pattern-hex {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%235DADE2' fill-opacity='0.05' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9v12.7l10.99 6.34 11-6.35V17.9l-11-6.34L3 17.9zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.3zM15 0v7.5L27.99 15H28v-2.31h-.01L17 6.35V0h-2zm0 49v-8l12.99-7.5H28v2.31h-.01L17 42.15V49h-2z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+}
