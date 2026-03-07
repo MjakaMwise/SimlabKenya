@@ -5,6 +5,7 @@ interface AbstractEmailData {
   schoolName: string;
   studentName: string;
   teacherName: string;
+  teacherEmail: string;
   teacherContact: string;
   projectTitle: string;
   projectDescription: string;
@@ -132,7 +133,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const data: AbstractEmailData = req.body;
 
-    if (!data.studentName || !data.projectTitle || !data.teacherContact) {
+    if (!data.studentName || !data.projectTitle || !data.teacherEmail) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -154,19 +155,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       timeout(12000),
     ]);
 
-    // Send confirmation to teacher/patron if contact is an email
-    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.teacherContact);
-    if (isEmail) {
-      await Promise.race([
-        transporter.sendMail({
-          from: `"SIM-Lab Kenya" <${process.env.GMAIL_USER}>`,
-          to: data.teacherContact,
-          subject: `Abstract Received: ${data.projectTitle} — SIM-Lab Science Fair`,
-          html: generateConfirmationEmailHtml(data, data.teacherContact),
-        }),
-        timeout(12000),
-      ]);
-    }
+    // Send confirmation to teacher/patron
+    await Promise.race([
+      transporter.sendMail({
+        from: `"SIM-Lab Kenya" <${process.env.GMAIL_USER}>`,
+        to: data.teacherEmail,
+        subject: `Abstract Received: ${data.projectTitle} — SIM-Lab Science Fair`,
+        html: generateConfirmationEmailHtml(data, data.teacherEmail),
+      }),
+      timeout(12000),
+    ]);
 
     return res.status(200).json({ success: true });
   } catch (error) {
