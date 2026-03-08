@@ -77,7 +77,7 @@ const ProductCard = ({ product }: ProductCardProps) => {
         name: product.name,
         price: product.price,
         size: selectedSize || undefined,
-        image_url: product.image_url,
+        image_url: getProductImage(product.name, product.image_url),
       },
       quantity
     );

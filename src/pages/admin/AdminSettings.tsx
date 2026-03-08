@@ -18,10 +18,6 @@ const AdminSettings = () => {
         newPassword: "",
         confirmPassword: "",
     });
-    const [notificationSettings, setNotificationSettings] = useState({
-        emailOnNewOrder: true,
-        emailDailySummary: false,
-    });
 
     const handlePasswordChange = async () => {
         if (passwordData.newPassword.length < 6) {
@@ -176,39 +172,23 @@ const AdminSettings = () => {
                         <Bell className="w-5 h-5 text-primary" /> Notifications
                     </h2>
                     <div className="space-y-4">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between opacity-70">
                             <div>
                                 <p className="font-medium">Email on new order</p>
                                 <p className="text-sm text-muted-foreground">
-                                    Receive an email notification when a new order is placed
+                                    Always enabled — an email is sent for every new order
                                 </p>
                             </div>
-                            <Switch
-                                checked={notificationSettings.emailOnNewOrder}
-                                onCheckedChange={(checked) =>
-                                    setNotificationSettings({
-                                        ...notificationSettings,
-                                        emailOnNewOrder: checked,
-                                    })
-                                }
-                            />
+                            <Switch checked={true} disabled />
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between opacity-70">
                             <div>
                                 <p className="font-medium">Daily summary email</p>
                                 <p className="text-sm text-muted-foreground">
-                                    Receive a daily summary of all orders and activity
+                                    Not yet implemented
                                 </p>
                             </div>
-                            <Switch
-                                checked={notificationSettings.emailDailySummary}
-                                onCheckedChange={(checked) =>
-                                    setNotificationSettings({
-                                        ...notificationSettings,
-                                        emailDailySummary: checked,
-                                    })
-                                }
-                            />
+                            <Switch checked={false} disabled />
                         </div>
                     </div>
                 </motion.div>

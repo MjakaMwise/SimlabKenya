@@ -10,12 +10,10 @@ import {
     Clock,
     ArrowRight,
     Loader2,
-    Eye,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import FilePreviewModal, { type AbstractPreview } from "@/components/admin/FilePreviewModal";
 
 interface OrderStats {
     pending: number;
@@ -50,7 +48,6 @@ const AdminDashboard = () => {
     });
     const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
     const [isLoading, setIsLoading] = useState(true);
-    const [previewAbstract, setPreviewAbstract] = useState<AbstractPreview | null>(null);
 
     useEffect(() => {
         fetchDashboardData();
@@ -105,7 +102,6 @@ const AdminDashboard = () => {
     }
 
     return (
-        <>
         <AdminLayout>
             <div className="space-y-6">
                 {/* Header */}
@@ -283,26 +279,12 @@ const AdminDashboard = () => {
                                                 {formatDate(order.created_at)}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-1">
-                                                    <Link
-                                                        to={`/admin/orders/${order.order_number}`}
-                                                        className="text-primary hover:underline text-sm"
-                                                    >
-                                                        View
-                                                    </Link>
-                                                    <button
-                                                        onClick={() => setPreviewAbstract({
-                                                            title: `Order ${order.order_number}`,
-                                                            author: order.customer_name,
-                                                            status: order.order_status,
-                                                            submittedAt: order.created_at,
-                                                        })}
-                                                        className="p-1.5 hover:bg-gray-100 rounded-lg ml-1"
-                                                        title="Preview"
-                                                    >
-                                                        <Eye className="w-4 h-4 text-gray-500" />
-                                                    </button>
-                                                </div>
+                                                <Link
+                                                    to={`/admin/orders/${order.order_number}`}
+                                                    className="text-primary hover:underline text-sm"
+                                                >
+                                                    View
+                                                </Link>
                                             </td>
                                         </tr>
                                     ))}
@@ -313,14 +295,6 @@ const AdminDashboard = () => {
                 </motion.div>
             </div>
         </AdminLayout>
-
-            {previewAbstract && (
-                <FilePreviewModal
-                    abstract={previewAbstract}
-                    onClose={() => setPreviewAbstract(null)}
-                />
-            )}
-        </>
     );
 };
 
