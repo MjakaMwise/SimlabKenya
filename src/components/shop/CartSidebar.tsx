@@ -1,6 +1,7 @@
 import { X, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useCart } from "@/hooks/useCart";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +13,7 @@ interface CartSidebarProps {
 const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
   const { items, removeItem, updateQuantity, getTotal, getItemCount } = useCart();
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -163,7 +164,8 @@ const CartSidebar = ({ isOpen, onClose }: CartSidebarProps) => {
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 
