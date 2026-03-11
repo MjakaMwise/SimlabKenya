@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Upload, FileText, CheckCircle2, XCircle } from "lucide-react";
+import { Upload, FileText, CheckCircle2, XCircle, X } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
@@ -47,9 +47,8 @@ const Abstract = () => {
     projectDescription: "",
     projectCategory: "",
   });
-  const [abstractFile, setAbstractFile] = useState<File | null>(null);
+  const [abstractFiles, setAbstractFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [fileName, setFileName] = useState("");
   const [submissionStatus, setSubmissionStatus] = useState<"success" | "error" | null>(null);
 
   const handleChange = (
@@ -69,31 +68,47 @@ const Abstract = () => {
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      // Validate file size (max 5MB)
+    const selected = Array.from(e.target.files ?? []);
+    const valid: File[] = [];
+
+    const allowedTypes = [
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+
+    for (const file of selected) {
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: `"${file.name}" is not a PDF or Word document — skipped`,
+          variant: "destructive",
+        });
+        continue;
+      }
       if (file.size > 5 * 1024 * 1024) {
         toast({
           title: "File too large",
-          description: "Please upload a file smaller than 5MB",
+          description: `"${file.name}" exceeds 5MB — skipped`,
           variant: "destructive",
         });
-        return;
+        continue;
       }
-
-      // Validate file type (PDF only)
-      if (file.type !== "application/pdf") {
-        toast({
-          title: "Invalid file type",
-          description: "Please upload a PDF file",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      setAbstractFile(file);
-      setFileName(file.name);
+      valid.push(file);
     }
+
+    if (valid.length > 0) {
+      setAbstractFiles((prev) => {
+        const existing = new Set(prev.map((f) => f.name));
+        return [...prev, ...valid.filter((f) => !existing.has(f.name))];
+      });
+    }
+    // reset input so same file can be re-added after removal
+    e.target.value = "";
+  };
+
+  const removeFile = (index: number) => {
+    setAbstractFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -112,11 +127,11 @@ const Abstract = () => {
       !formData.projectTitle.trim() ||
       !formData.projectDescription.trim() ||
       !formData.projectCategory ||
-      !abstractFile
+      abstractFiles.length === 0
     ) {
       toast({
         title: "Missing fields",
-        description: "Please fill in all fields and upload an abstract",
+        description: "Please fill in all fields and upload at least one abstract",
         variant: "destructive",
       });
       return;
@@ -162,22 +177,30 @@ const Abstract = () => {
     setSubmissionStatus(null);
 
     try {
-      // 1. Upload file to Cloudinary
-      const cloudFormData = new FormData();
-      cloudFormData.append("file", abstractFile);
-      cloudFormData.append("upload_preset", CLOUDINARY_PRESET);
-      cloudFormData.append("folder", "simlab/abstracts");
+      // 1. Upload all files to Cloudinary
+      const uploadedFiles = await Promise.all(
+        abstractFiles.map(async (file) => {
+          const cloudFormData = new FormData();
+          cloudFormData.append("file", file);
+          cloudFormData.append("upload_preset", CLOUDINARY_PRESET);
+          cloudFormData.append("folder", "simlab/abstracts");
 
-      const ext = abstractFile.name.split(".").pop()?.toLowerCase();
-      const resourceType = ext === "pdf" ? "raw" : "raw";
-
-      const cloudRes = await fetch(
-        `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/${resourceType}/upload`,
-        { method: "POST", body: cloudFormData }
+          const res = await fetch(
+            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/raw/upload`,
+            { method: "POST", body: cloudFormData }
+          );
+          if (!res.ok) throw new Error(`Upload failed for "${file.name}"`);
+          const data = await res.json();
+          return {
+            fileName:           file.name,
+            fileType:           file.name.split(".").pop()?.toLowerCase() ?? "pdf",
+            fileSize:           file.size,
+            viewUrl:            data.secure_url as string,
+            downloadUrl:        data.secure_url as string,
+            cloudinaryPublicId: data.public_id as string,
+          };
+        })
       );
-
-      if (!cloudRes.ok) throw new Error("File upload failed");
-      const cloudData = await cloudRes.json();
 
       // 2. Save metadata to Firestore
       await addDoc(collection(db, "abstracts"), {
@@ -189,12 +212,14 @@ const Abstract = () => {
         projectTitle:       formData.projectTitle.trim(),
         projectDescription: formData.projectDescription.trim(),
         projectCategory:    formData.projectCategory,
-        fileName:           abstractFile.name,
-        fileType:           ext,
-        fileSize:           abstractFile.size,
-        viewUrl:            cloudData.secure_url,
-        downloadUrl:        cloudData.secure_url,
-        cloudinaryPublicId: cloudData.public_id,
+        files:              uploadedFiles,
+        // keep legacy single-file fields for backwards compatibility
+        fileName:           uploadedFiles[0].fileName,
+        fileType:           uploadedFiles[0].fileType,
+        fileSize:           uploadedFiles[0].fileSize,
+        viewUrl:            uploadedFiles[0].viewUrl,
+        downloadUrl:        uploadedFiles[0].downloadUrl,
+        cloudinaryPublicId: uploadedFiles[0].cloudinaryPublicId,
         status:             "pending",
         emailSent:          false,
         submittedAt:        serverTimestamp(),
@@ -213,8 +238,8 @@ const Abstract = () => {
           projectTitle:       formData.projectTitle.trim(),
           projectDescription: formData.projectDescription.trim(),
           projectCategory:    formData.projectCategory,
-          fileName:           abstractFile.name,
-          viewUrl:            cloudData.secure_url,
+          fileName:           uploadedFiles.map((f) => f.fileName).join(", "),
+          viewUrl:            uploadedFiles[0].viewUrl,
         }),
       }).catch((err) => console.warn("Email notification failed:", err));
 
@@ -235,8 +260,7 @@ const Abstract = () => {
         projectDescription: "",
         projectCategory: "",
       });
-      setAbstractFile(null);
-      setFileName("");
+      setAbstractFiles([]);
     } catch (error) {
       console.error("Submission error:", error);
       setSubmissionStatus("error");
@@ -278,7 +302,7 @@ const Abstract = () => {
                   <p className="text-gray-700 leading-relaxed">
                     We invite students and innovators to share their groundbreaking
                     projects. Please provide detailed information about your project and
-                    upload your abstract in PDF format. Our team will review your
+                    upload your abstract in PDF or Word format. Our team will review your
                     submission and get back to you with results.
                   </p>
                 </div>
@@ -421,32 +445,57 @@ const Abstract = () => {
               {/* Abstract Upload */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-gray-900">
-                  Abstract Upload (PDF) *
+                  Abstract Upload (PDF or Word) *
                 </label>
                 <div className="relative">
                   <input
                     type="file"
-                    accept=".pdf"
+                    accept=".pdf,.doc,.docx"
+                    multiple
                     onChange={handleFileChange}
                     className="hidden"
                     id="abstract-file"
-                    required
                   />
-                  <label
-                    htmlFor="abstract-file"
-                    className="cursor-pointer block"
-                  >
+                  <label htmlFor="abstract-file" className="cursor-pointer block">
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary hover:bg-primary/5 transition-colors">
                       <Upload className="w-10 h-10 mx-auto text-gray-400 mb-3" />
                       <p className="text-sm font-medium text-gray-900 mb-1">
-                        {fileName || "Click to upload or drag and drop"}
+                        Click to upload or drag and drop
                       </p>
                       <p className="text-xs text-gray-500">
-                        PDF up to 5MB
+                        PDF or Word (.doc, .docx) — up to 5MB each, multiple files allowed
                       </p>
                     </div>
                   </label>
                 </div>
+
+                {/* Selected files list */}
+                {abstractFiles.length > 0 && (
+                  <ul className="mt-3 space-y-2">
+                    {abstractFiles.map((file, i) => (
+                      <li
+                        key={file.name}
+                        className="flex items-center justify-between gap-3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
+                      >
+                        <span className="flex items-center gap-2 truncate">
+                          <FileText className="w-4 h-4 text-primary shrink-0" />
+                          <span className="truncate text-gray-800">{file.name}</span>
+                          <span className="text-gray-400 shrink-0">
+                            ({(file.size / 1024).toFixed(0)} KB)
+                          </span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFile(i)}
+                          className="shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                          aria-label={`Remove ${file.name}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
 
               {/* Submit Button */}
@@ -536,11 +585,15 @@ const Abstract = () => {
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex gap-2">
                     <span className="text-primary font-bold">•</span>
-                    PDF format only
+                    PDF or Word (.doc, .docx) format
                   </li>
                   <li className="flex gap-2">
                     <span className="text-primary font-bold">•</span>
-                    Maximum 5MB file size
+                    Maximum 5MB per file
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-primary font-bold">•</span>
+                    Multiple files allowed
                   </li>
                   <li className="flex gap-2">
                     <span className="text-primary font-bold">•</span>
