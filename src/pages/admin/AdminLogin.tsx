@@ -58,7 +58,7 @@ const AdminLogin = () => {
         setOtpInitError("");
 
         try {
-            const response = await fetch("/api/send-otp-email", {
+            const response = await fetch("/api/admin/send-otp", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: otpEmail }),
@@ -118,7 +118,7 @@ const AdminLogin = () => {
         }
 
         try {
-            const response = await fetch("/api/verify-otp", {
+            const response = await fetch("/api/admin/verify-otp", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ email: otpEmail, otp: code }),
@@ -235,7 +235,7 @@ const AdminLogin = () => {
                                             type="password"
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
-                                            placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                                            placeholder="Enter your password"
                                             className="pl-10"
                                             required
                                         />

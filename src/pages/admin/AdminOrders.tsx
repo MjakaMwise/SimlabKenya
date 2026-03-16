@@ -13,7 +13,7 @@ import {
     ChevronRight,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -55,6 +55,7 @@ const paymentColors: Record<string, string> = {
 const ITEMS_PER_PAGE = 20;
 
 const AdminOrders = () => {
+    const { token } = useAdminAuth();
     const [searchParams, setSearchParams] = useSearchParams();
     const [orders, setOrders] = useState<Order[]>([]);
     const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
@@ -66,20 +67,20 @@ const AdminOrders = () => {
     const [currentPage, setCurrentPage] = useState(1);
 
     const fetchOrders = useCallback(async () => {
+        if (!token) return;
         try {
-            const { data, error } = await supabase
-                .from("orders")
-                .select("*")
-                .order("created_at", { ascending: false });
-
-            if (error) throw error;
-            setOrders(data || []);
+            const res = await fetch("/api/orders?limit=500", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Failed to fetch orders");
+            const data = await res.json();
+            setOrders(data.orders || []);
         } catch (error) {
             console.error("Error fetching orders:", error);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [token]);
 
     const filterOrders = useCallback(() => {
         let filtered = [...orders];
@@ -339,7 +340,7 @@ const AdminOrders = () => {
                                         <tr key={order.id} className="hover:bg-gray-50">
                                             <td className="px-4 py-4">
                                                 <Link
-                                                    to={`/admin/orders/${order.order_number}`}
+                                                    to={`/admin/orders/${order.id}`}
                                                     className="font-mono text-sm font-medium text-primary hover:underline"
                                                 >
                                                     {order.order_number}
@@ -382,7 +383,7 @@ const AdminOrders = () => {
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-1">
                                                     <Link
-                                                        to={`/admin/orders/${order.order_number}`}
+                                                        to={`/admin/orders/${order.id}`}
                                                         className="p-2 hover:bg-gray-100 rounded-lg"
                                                         title="View Details"
                                                     >

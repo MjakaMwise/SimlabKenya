@@ -12,7 +12,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
 const checkoutSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
@@ -57,13 +56,6 @@ const Checkout = () => {
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  const generateOrderNumber = () => {
-    const date = new Date();
-    const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
-    const random = Math.floor(Math.random() * 900) + 100;
-    return `ORD-${dateStr}-${random}`;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -99,7 +91,6 @@ const Checkout = () => {
     setIsSubmitting(true);
 
     try {
-      const orderNumber = generateOrderNumber();
       const orderItems = items.map((item) => ({
         id: item.id,
         name: item.name,
@@ -108,46 +99,30 @@ const Checkout = () => {
         size: item.size,
       }));
 
-      const { error } = await supabase.from("orders").insert({
-        order_number: orderNumber,
-        customer_name: formData.name.trim(),
-        customer_email: formData.email.trim(),
-        customer_phone: formData.phone.trim(),
-        delivery_method: formData.deliveryMethod,
-        delivery_location: formData.deliveryLocation || null,
-        delivery_address: formData.deliveryAddress?.trim() || null,
-        items: orderItems,
-        total_amount: getTotal(),
-        additional_notes: formData.additionalNotes?.trim() || null,
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_name: formData.name.trim(),
+          customer_email: formData.email.trim(),
+          customer_phone: formData.phone.trim(),
+          delivery_method: formData.deliveryMethod,
+          delivery_location: formData.deliveryLocation || undefined,
+          delivery_address: formData.deliveryAddress?.trim() || undefined,
+          items: orderItems,
+          total_amount: getTotal(),
+          additional_notes: formData.additionalNotes?.trim() || undefined,
+        }),
       });
 
-      if (error) throw error;
-
-      // Send email notifications (don't block order completion if email fails)
-      try {
-        await fetch('/api/send-order-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderNumber,
-            customerName: formData.name.trim(),
-            customerEmail: formData.email.trim(),
-            customerPhone: formData.phone.trim(),
-            deliveryMethod: formData.deliveryMethod,
-            deliveryLocation: formData.deliveryLocation || undefined,
-            deliveryAddress: formData.deliveryAddress?.trim() || undefined,
-            items: orderItems,
-            totalAmount: getTotal(),
-            additionalNotes: formData.additionalNotes?.trim() || undefined,
-          }),
-        });
-      } catch (emailError) {
-        console.error('Email notification failed:', emailError);
-        // Continue with order - emails are not critical
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to place order");
       }
 
+      const order = await res.json();
       clearCart();
-      navigate(`/order-confirmation?order=${orderNumber}`);
+      navigate(`/order-confirmation?order=${order.order_number}`);
     } catch (error) {
       console.error("Order error:", error);
       toast({

@@ -19,7 +19,7 @@ import {
     Printer,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import {
     Select,
@@ -72,7 +72,8 @@ const paymentColors: Record<string, string> = {
 };
 
 const AdminOrderDetail = () => {
-    const { orderNumber } = useParams<{ orderNumber: string }>();
+    const { orderId } = useParams<{ orderId: string }>();
+    const { token } = useAdminAuth();
     const navigate = useNavigate();
     const { toast } = useToast();
     const [order, setOrder] = useState<Order | null>(null);
@@ -80,20 +81,18 @@ const AdminOrderDetail = () => {
     const [isUpdating, setIsUpdating] = useState(false);
 
     const fetchOrder = useCallback(async () => {
-        if (!orderNumber) return;
+        if (!orderId || !token) return;
         try {
-            const { data, error } = await supabase
-                .from("orders")
-                .select("*")
-                .eq("order_number", orderNumber)
-                .single();
-
-            if (error) throw error;
+            const res = await fetch(`/api/orders/${orderId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Order not found");
+            const data = await res.json();
             setOrder({
                 ...data,
-                items: (typeof data.items === 'string'
+                items: (typeof data.items === "string"
                     ? JSON.parse(data.items)
-                    : data.items) as OrderItem[]
+                    : data.items) as OrderItem[],
             });
         } catch (error) {
             console.error("Error fetching order:", error);
@@ -106,77 +105,50 @@ const AdminOrderDetail = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [orderNumber, navigate, toast]);
+    }, [orderId, token, navigate, toast]);
 
     useEffect(() => {
         fetchOrder();
     }, [fetchOrder]);
 
-    const updateOrderStatus = async (newStatus: string) => {
-        if (!order) return;
+    const patchOrder = async (updates: Record<string, unknown>) => {
+        if (!order || !token) return;
         setIsUpdating(true);
-
         try {
-            const updates: Record<string, unknown> = { order_status: newStatus };
-
-            if (newStatus === "contacted" && !order.contacted_at) {
-                updates.contacted_at = new Date().toISOString();
-            }
-            if (newStatus === "completed") {
-                updates.completed_at = new Date().toISOString();
-            }
-
-            const { error } = await supabase
-                .from("orders")
-                .update(updates)
-                .eq("id", order.id);
-
-            if (error) throw error;
-
-            setOrder({ ...order, ...updates } as Order);
-            toast({
-                title: "Status updated",
-                description: `Order status changed to ${newStatus}`,
+            const res = await fetch(`/api/orders/${order.id}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify(updates),
             });
+            if (!res.ok) throw new Error("Update failed");
+            const updated = await res.json();
+            setOrder({ ...order, ...updated });
+            return true;
         } catch (error) {
-            console.error("Error updating status:", error);
-            toast({
-                title: "Update failed",
-                description: "Failed to update order status",
-                variant: "destructive",
-            });
+            console.error("Error updating order:", error);
+            return false;
         } finally {
             setIsUpdating(false);
         }
     };
 
+    const updateOrderStatus = async (newStatus: string) => {
+        const ok = await patchOrder({ order_status: newStatus });
+        toast(ok
+            ? { title: "Status updated", description: `Order status changed to ${newStatus}` }
+            : { title: "Update failed", description: "Failed to update order status", variant: "destructive" }
+        );
+    };
+
     const updatePaymentStatus = async (newStatus: string) => {
-        if (!order) return;
-        setIsUpdating(true);
-
-        try {
-            const { error } = await supabase
-                .from("orders")
-                .update({ payment_status: newStatus })
-                .eq("id", order.id);
-
-            if (error) throw error;
-
-            setOrder({ ...order, payment_status: newStatus });
-            toast({
-                title: "Payment updated",
-                description: `Payment status changed to ${newStatus}`,
-            });
-        } catch (error) {
-            console.error("Error updating payment:", error);
-            toast({
-                title: "Update failed",
-                description: "Failed to update payment status",
-                variant: "destructive",
-            });
-        } finally {
-            setIsUpdating(false);
-        }
+        const ok = await patchOrder({ payment_status: newStatus });
+        toast(ok
+            ? { title: "Payment updated", description: `Payment status changed to ${newStatus}` }
+            : { title: "Update failed", description: "Failed to update payment status", variant: "destructive" }
+        );
     };
 
     const formatDate = (dateString: string) => {

@@ -5,6 +5,7 @@ import {
     LayoutDashboard,
     ShoppingCart,
     Package,
+    FileText,
     Settings,
     LogOut,
     Menu,
@@ -19,6 +20,7 @@ const navItems = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
     { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
     { label: "Products", href: "/admin/products", icon: Package },
+    { label: "Abstracts", href: "/admin/abstracts", icon: FileText },
     { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
@@ -120,7 +122,10 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
                 <nav className="p-4 space-y-1">
                     {navItems.map((item) => {
-                        const isActive = location.pathname === item.href;
+                        const isActive =
+                            item.href === "/admin"
+                                ? location.pathname === "/admin"
+                                : location.pathname.startsWith(item.href);
                         const Icon = item.icon;
                         return (
                             <Link

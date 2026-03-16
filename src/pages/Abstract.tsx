@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { Upload, FileText, CheckCircle2, XCircle, X } from "lucide-react";
+import { Upload, FileText, CheckCircle2, XCircle, X, Plus, Trash2 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
@@ -10,11 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
-
-const CLOUDINARY_CLOUD = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
-const CLOUDINARY_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
 const ALLOWED_FILE_TYPES = [
   "application/pdf",
@@ -43,7 +38,6 @@ const Abstract = () => {
   const { toast } = useToast();
   const [formData, setFormData] = useState({
     schoolName: "",
-    studentName: "",
     teacherName: "",
     teacherEmail: "",
     teacherContact: "",
@@ -51,6 +45,7 @@ const Abstract = () => {
     projectDescription: "",
     projectCategory: "",
   });
+  const [studentNames, setStudentNames] = useState<string[]>([""]);
   const [abstractFiles, setAbstractFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<"success" | "error" | null>(null);
@@ -105,9 +100,10 @@ const Abstract = () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const phoneRegex = /^[\d\s\+\-\(\)]{7,15}$/;
 
+    const filledStudents = studentNames.map((s) => s.trim()).filter(Boolean);
     if (
       !formData.schoolName.trim() ||
-      !formData.studentName.trim() ||
+      filledStudents.length === 0 ||
       !formData.teacherName.trim() ||
       !formData.teacherEmail.trim() ||
       !formData.teacherContact.trim() ||
@@ -164,71 +160,23 @@ const Abstract = () => {
     setSubmissionStatus(null);
 
     try {
-      // 1. Upload all files to Cloudinary
-      const uploadedFiles = await Promise.all(
-        abstractFiles.map(async (file) => {
-          const cloudFormData = new FormData();
-          cloudFormData.append("file", file);
-          cloudFormData.append("upload_preset", CLOUDINARY_PRESET);
-          cloudFormData.append("folder", "simlab/abstracts");
+      // Build multipart form — backend handles Cloudinary upload, Firestore save, and emails
+      const body = new FormData();
+      body.append("schoolName", formData.schoolName.trim());
+      filledStudents.forEach((name) => body.append("studentNames", name));
+      body.append("teacherName", formData.teacherName.trim());
+      body.append("teacherEmail", formData.teacherEmail.trim().toLowerCase());
+      body.append("teacherContact", formData.teacherContact.trim());
+      body.append("projectTitle", formData.projectTitle.trim());
+      body.append("projectDescription", formData.projectDescription.trim());
+      body.append("projectCategory", formData.projectCategory);
+      abstractFiles.forEach((file) => body.append("files", file));
 
-          const res = await fetch(
-            `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/raw/upload`,
-            { method: "POST", body: cloudFormData }
-          );
-          if (!res.ok) throw new Error(`Upload failed for "${file.name}"`);
-          const data = await res.json();
-          return {
-            fileName: file.name,
-            fileType: file.name.split(".").pop()?.toLowerCase() ?? "pdf",
-            fileSize: file.size,
-            viewUrl: data.secure_url as string,
-            downloadUrl: data.secure_url as string,
-            cloudinaryPublicId: data.public_id as string,
-          };
-        })
-      );
-
-      // 2. Save metadata to Firestore
-      await addDoc(collection(db, "abstracts"), {
-        schoolName: formData.schoolName.trim(),
-        studentName: formData.studentName.trim(),
-        teacherName: formData.teacherName.trim(),
-        teacherEmail: formData.teacherEmail.trim().toLowerCase(),
-        teacherContact: formData.teacherContact.trim(),
-        projectTitle: formData.projectTitle.trim(),
-        projectDescription: formData.projectDescription.trim(),
-        projectCategory: formData.projectCategory,
-        files: uploadedFiles,
-        // legacy single-file fields for backwards compatibility
-        fileName: uploadedFiles[0].fileName,
-        fileType: uploadedFiles[0].fileType,
-        fileSize: uploadedFiles[0].fileSize,
-        viewUrl: uploadedFiles[0].viewUrl,
-        downloadUrl: uploadedFiles[0].downloadUrl,
-        cloudinaryPublicId: uploadedFiles[0].cloudinaryPublicId,
-        status: "pending",
-        emailSent: false,
-        submittedAt: serverTimestamp(),
-      });
-
-      // 3. Send email notifications (non-blocking)
-      fetch("/api/send-abstract-email", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          schoolName: formData.schoolName.trim(),
-          studentName: formData.studentName.trim(),
-          teacherName: formData.teacherName.trim(),
-          teacherEmail: formData.teacherEmail.trim().toLowerCase(),
-          teacherContact: formData.teacherContact.trim(),
-          projectTitle: formData.projectTitle.trim(),
-          projectDescription: formData.projectDescription.trim(),
-          projectCategory: formData.projectCategory,
-          fileName: uploadedFiles.map((f) => f.fileName).join(", "),
-          viewUrl: uploadedFiles[0].viewUrl,
-        }),
-      }).catch((err) => console.warn("Email notification failed:", err));
+      const res = await fetch("/api/abstracts", { method: "POST", body });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Submission failed");
+      }
 
       setSubmissionStatus("success");
       toast({
@@ -238,7 +186,6 @@ const Abstract = () => {
 
       setFormData({
         schoolName: "",
-        studentName: "",
         teacherName: "",
         teacherEmail: "",
         teacherContact: "",
@@ -246,6 +193,7 @@ const Abstract = () => {
         projectDescription: "",
         projectCategory: "",
       });
+      setStudentNames([""]);
       setAbstractFiles([]);
     } catch (error) {
       console.error("Submission error:", error);
@@ -304,30 +252,60 @@ const Abstract = () => {
             viewport={{ once: true }}
           >
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-900">
+                  Name of School *
+                </label>
+                <Input
+                  name="schoolName"
+                  value={formData.schoolName}
+                  onChange={handleChange}
+                  placeholder="Enter your school name"
+                  required
+                />
+              </div>
+
+              {/* Dynamic student names */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
                   <label className="block text-sm font-semibold text-gray-900">
-                    Name of School *
+                    Student Name(s) *
                   </label>
-                  <Input
-                    name="schoolName"
-                    value={formData.schoolName}
-                    onChange={handleChange}
-                    placeholder="Enter your school name"
-                    required
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setStudentNames((prev) => [...prev, ""])}
+                    className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Student
+                  </button>
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-900">
-                    Student Name *
-                  </label>
-                  <Input
-                    name="studentName"
-                    value={formData.studentName}
-                    onChange={handleChange}
-                    placeholder="Enter student name"
-                    required
-                  />
+                  {studentNames.map((name, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Input
+                        value={name}
+                        onChange={(e) =>
+                          setStudentNames((prev) =>
+                            prev.map((v, i) => (i === idx ? e.target.value : v))
+                          )
+                        }
+                        placeholder={idx === 0 ? "Enter student name" : `Student ${idx + 1} name`}
+                        required={idx === 0}
+                      />
+                      {studentNames.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setStudentNames((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          className="shrink-0 text-gray-400 hover:text-red-500 transition-colors"
+                          aria-label="Remove student"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
 

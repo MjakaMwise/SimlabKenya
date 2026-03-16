@@ -10,7 +10,7 @@ import {
     X,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
-import { supabase } from "@/integrations/supabase/client";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +51,7 @@ const defaultProduct: Omit<Product, "id"> = {
 };
 
 const AdminProducts = () => {
+    const { token } = useAdminAuth();
     const [products, setProducts] = useState<Product[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -60,18 +61,21 @@ const AdminProducts = () => {
     const { toast } = useToast();
 
     useEffect(() => {
-        fetchProducts();
-    }, []);
+        if (token) fetchProducts();
+    }, [token]);
+
+    const authHeaders = () => ({
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+    });
 
     const fetchProducts = async () => {
         try {
-            const { data, error } = await supabase
-                .from("products")
-                .select("*")
-                .order("created_at", { ascending: false });
-
-            if (error) throw error;
-            setProducts(data || []);
+            const res = await fetch("/api/products", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Failed to fetch products");
+            setProducts(await res.json());
         } catch (error) {
             console.error("Error fetching products:", error);
         } finally {
@@ -127,23 +131,24 @@ const AdminProducts = () => {
             };
 
             if (editingProduct) {
-                // Update existing product
-                const { error } = await supabase
-                    .from("products")
-                    .update(productData)
-                    .eq("id", editingProduct.id);
-
-                if (error) throw error;
+                const res = await fetch(`/api/products/${editingProduct.id}`, {
+                    method: "PUT",
+                    headers: authHeaders(),
+                    body: JSON.stringify(productData),
+                });
+                if (!res.ok) throw new Error("Failed to update product");
 
                 toast({
                     title: "Product updated",
                     description: `${formData.name} has been updated.`,
                 });
             } else {
-                // Create new product
-                const { error } = await supabase.from("products").insert(productData);
-
-                if (error) throw error;
+                const res = await fetch("/api/products", {
+                    method: "POST",
+                    headers: authHeaders(),
+                    body: JSON.stringify(productData),
+                });
+                if (!res.ok) throw new Error("Failed to create product");
 
                 toast({
                     title: "Product created",
@@ -171,12 +176,11 @@ const AdminProducts = () => {
         }
 
         try {
-            const { error } = await supabase
-                .from("products")
-                .delete()
-                .eq("id", product.id);
-
-            if (error) throw error;
+            const res = await fetch(`/api/products/${product.id}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Failed to delete product");
 
             toast({
                 title: "Product deleted",
@@ -196,12 +200,12 @@ const AdminProducts = () => {
 
     const toggleAvailability = async (product: Product) => {
         try {
-            const { error } = await supabase
-                .from("products")
-                .update({ is_available: !product.is_available })
-                .eq("id", product.id);
-
-            if (error) throw error;
+            const res = await fetch(`/api/products/${product.id}`, {
+                method: "PUT",
+                headers: authHeaders(),
+                body: JSON.stringify({ ...product, is_available: !product.is_available }),
+            });
+            if (!res.ok) throw new Error("Failed to update product");
 
             setProducts((prev) =>
                 prev.map((p) =>

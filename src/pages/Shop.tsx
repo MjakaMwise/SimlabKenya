@@ -4,7 +4,6 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import PageHero from "@/components/PageHero";
 import ProductCard from "@/components/shop/ProductCard";
-import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 interface Product {
@@ -30,18 +29,16 @@ const Shop = () => {
   }, []);
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("is_available", true)
-      .order("created_at");
-
-    if (error) {
-      console.error("Error fetching products:", error);
-    } else {
+    try {
+      const res = await fetch("/api/products");
+      if (!res.ok) throw new Error("Failed to fetch products");
+      const data = await res.json();
       setProducts(data || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const categories = [...new Set(products.map((p) => p.category))];

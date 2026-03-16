@@ -28,6 +28,8 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import AdminProducts from "./pages/admin/AdminProducts";
+import AdminAbstracts from "./pages/admin/AdminAbstracts";
+import AdminAbstractDetail from "./pages/admin/AdminAbstractDetail";
 import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
@@ -86,6 +88,22 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <AdminProducts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/abstracts"
+                element={
+                  <ProtectedRoute>
+                    <AdminAbstracts />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/abstracts/:id"
+                element={
+                  <ProtectedRoute>
+                    <AdminAbstractDetail />
                   </ProtectedRoute>
                 }
               />

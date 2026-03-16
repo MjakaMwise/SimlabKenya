@@ -5,6 +5,7 @@ import { User, Session } from "@supabase/supabase-js";
 interface AdminAuthContextType {
     user: User | null;
     session: Session | null;
+    token: string | null;
     isLoading: boolean;
     isAdmin: boolean;
     isMfaVerified: boolean;
@@ -33,37 +34,33 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
             setIsMfaVerified(sessionStorage.getItem(key) === "true");
         };
 
-        const resolveAdmin = async (activeSession: Session | null) => {
-            if (!activeSession) {
+        const ADMIN_EMAILS = ["simlabkenya@gmail.com"];
+
+        const resolveAdmin = (activeSession: Session | null) => {
+            if (!activeSession?.user?.email) {
                 setIsAdmin(false);
                 return;
             }
-            const { data, error } = await supabase.rpc("is_admin");
-            if (error) {
-                console.error("Failed to resolve admin status:", error);
-                setIsAdmin(false);
-                return;
-            }
-            setIsAdmin(Boolean(data));
+            setIsAdmin(ADMIN_EMAILS.includes(activeSession.user.email));
         };
 
         // Get initial session
-        supabase.auth.getSession().then(async ({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
             setSession(session);
             setUser(session?.user ?? null);
             syncMfa(session);
-            await resolveAdmin(session);
+            resolveAdmin(session);
             setIsLoading(false);
         });
 
         // Listen for auth changes
         const {
             data: { subscription },
-        } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        } = supabase.auth.onAuthStateChange((_event, session) => {
             setSession(session);
             setUser(session?.user ?? null);
             syncMfa(session);
-            await resolveAdmin(session);
+            resolveAdmin(session);
             setIsLoading(false);
         });
 
@@ -110,6 +107,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
             value={{
                 user,
                 session,
+                token: session?.access_token ?? null,
                 isLoading,
                 isAdmin,
                 isMfaVerified,
