@@ -9,8 +9,11 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:5173',
+  'https://simlabkenya.co.ke',
   'https://simlabkenya.co.ke/admin',
+  'https://simlab-kenya-41nx-git-main-marshallisraelokoth-2763s-projects.vercel.app',
   process.env.ADMIN_DASHBOARD_URL,
+  process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
 ].filter(Boolean) as string[];
 
 app.use(
