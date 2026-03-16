@@ -123,6 +123,103 @@ api/
 
 ---
 
+## Frontend: React App Setup
+
+### React Router v7 Future Flags
+
+**File:** `src/App.tsx`
+
+**Technology:** React Router v6 with v7 compatibility flags
+
+To suppress deprecation warnings for React Router v7, the `BrowserRouter` is configured with future flags that opt-in to v7 behavior early:
+
+```typescript
+<BrowserRouter future={{ 
+  v7_startTransition: true,    // Wraps state updates in React.startTransition
+  v7_relativeSplatPath: true   // Changes relative route resolution in splat routes
+}}>
+  {/* Routes */}
+</BrowserRouter>
+```
+
+**Technique: Global state management hierarchy**
+
+The app is wrapped in multiple context providers in order:
+
+```typescript
+<QueryClientProvider client={queryClient}>
+  <AdminAuthProvider>
+    <CartProvider>
+      <TooltipProvider>
+        <BrowserRouter>
+          {/* All routes here have access to TanStack Query, admin auth, cart, and tooltips */}
+        </BrowserRouter>
+```
+
+---
+
+## File Preview System
+
+### Abstract File Preview Modal
+
+**File:** `src/components/admin/FilePreviewModal.tsx`
+
+**Technologies:** Mammoth (Word to HTML), Dialog, Tabs
+
+Admins can preview PDF and DOCX files inline before downloading them. The modal supports:
+
+- **PDF previews** — rendered inline via browser's native PDF viewer
+- **DOCX previews** — converted to HTML using Mammoth library for full compatibility
+- **File details tab** — metadata like file type, size, submission date, status
+- **External links** — "Open" button to view in new tab, "Download" to save with correct filename
+
+**Technique: File type detection**
+
+MIME types are mapped to preview-enabled types (PDF/DOCX). Other file types show a download-only interface:
+
+```typescript
+const getFileTypeFromMimeType = (mimeType: string): "pdf" | "docx" | undefined => {
+  if (mimeType === "application/pdf") return "pdf";
+  if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return "docx";
+  return undefined;
+};
+```
+
+**Technique: DOCX to HTML conversion**
+
+When a DOCX preview is requested, the Mammoth library converts the document in-memory without server round-trips:
+
+```typescript
+async function convertDocx() {
+  try {
+    setLoading(true);
+    const mammoth = await import("mammoth");
+    const res = await fetch(abstract.viewUrl!);
+    const arrayBuffer = await res.arrayBuffer();
+    const result = await mammoth.convertToHtml({ arrayBuffer });
+    setDocxHtml(result.value);
+  } catch {
+    setError("Could not load document preview");
+  } finally {
+    setLoading(false);
+  }
+}
+```
+
+**Technique: Proper file extensions on download**
+
+The download link includes the original filename with extension:
+
+```typescript
+<a href={abstract.downloadUrl} download={abstract.fileName}>
+  <Download className="w-3.5 h-3.5 mr-1" /> Download
+</a>
+```
+
+This ensures files download as `project.pdf` instead of `project` (no extension).
+
+---
+
 ## Backend: Express REST API
 
 ### 1. Express App Setup
@@ -133,14 +230,17 @@ api/
 
 **Technique: CORS with dynamic origin whitelist**
 
-The allowed origins list includes both local dev ports and the production URL. The `origin` callback checks `startsWith` so sub-paths are also allowed.
+The allowed origins list includes local dev ports, production domains, and Vercel deployment URLs. The `origin` callback checks `startsWith` so sub-paths are also allowed:
 
 ```typescript
 const allowedOrigins = [
   'http://localhost:8080',
   'http://localhost:5173',
+  'https://simlabkenya.co.ke',
   'https://simlabkenya.co.ke/admin',
+  'https://simlab-kenya-41nx-git-main-marshallisraelokoth-2763s-projects.vercel.app',
   process.env.ADMIN_DASHBOARD_URL,
+  process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
 ].filter(Boolean) as string[];
 
 app.use(cors({
@@ -154,6 +254,8 @@ app.use(cors({
   credentials: true,
 }));
 ```
+
+This ensures API requests from Vercel preview deployments and production builds are never blocked by CORS.
 
 **Technique: Route mounting under /api prefix**
 
@@ -839,7 +941,7 @@ if (fetchError) {
 
 **File:** `src/pages/admin/AdminAbstractDetail.tsx`
 
-**Technologies:** Fetch API, shadcn/ui Select
+**Technologies:** Fetch API, shadcn/ui Select, FilePreviewModal
 
 **Technique: Inline status update**
 
@@ -887,6 +989,52 @@ Long unbroken strings (e.g. URLs in project descriptions) are contained with a c
 >
   {abstract.projectDescription}
 </p>
+```
+
+**Technique: Integrated file preview with preview modal**
+
+Each file in the submission shows two action buttons:
+1. **Preview button (Eye icon)** — appears only for PDF/DOCX files, opens FilePreviewModal
+2. **Download button** — available for all file types, downloads with proper filename and extension
+
+```typescript
+{getFileTypeFromMimeType(file.mimeType) && (
+  <button
+    onClick={() => setSelectedFile({ file, abstract })}
+    className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+    title="Preview file"
+  >
+    <Eye className="w-4 h-4 text-gray-600" />
+  </button>
+)}
+
+<a
+  href={file.url}
+  download={file.originalName}
+  rel="noopener noreferrer"
+  className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+  title="Download"
+>
+  <Download className="w-4 h-4 text-gray-600" />
+</a>
+```
+
+When a file is selected, the modal is rendered with all necessary metadata:
+
+```typescript
+{selectedFile && (
+  <FilePreviewModal
+    abstract={{
+      title: selectedFile.abstract.projectTitle,
+      fileType: getFileTypeFromMimeType(selectedFile.file.mimeType),
+      viewUrl: selectedFile.file.url,
+      downloadUrl: selectedFile.file.url,
+      fileName: selectedFile.file.originalName,
+      // ... other metadata
+    }}
+    onClose={() => setSelectedFile(null)}
+  />
+)}
 ```
 
 ---

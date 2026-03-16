@@ -6,6 +6,7 @@ import {
     Loader2,
     Download,
     FileText,
+    Eye,
     User,
     School,
     Phone,
@@ -24,6 +25,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import FilePreviewModal, { AbstractPreview } from "@/components/admin/FilePreviewModal";
 
 interface AbstractFile {
     originalName: string;
@@ -61,6 +63,25 @@ const formatBytes = (bytes: number) => {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 };
 
+const getFileTypeFromMimeType = (mimeType: string): "pdf" | "docx" | undefined => {
+    if (mimeType === "application/pdf") return "pdf";
+    if (mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") return "docx";
+    return undefined;
+};
+
+const getFileExtension = (mimeType: string): string => {
+    const mimeMap: Record<string, string> = {
+        "application/pdf": ".pdf",
+        "application/msword": ".doc",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+        "application/vnd.ms-excel": ".xls",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+        "application/vnd.oasis.opendocument.text": ".odt",
+        "text/plain": ".txt",
+    };
+    return mimeMap[mimeType] || "";
+};
+
 const AdminAbstractDetail = () => {
     const { id } = useParams<{ id: string }>();
     const { token } = useAdminAuth();
@@ -68,6 +89,7 @@ const AdminAbstractDetail = () => {
     const [abstract, setAbstract] = useState<Abstract | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isUpdating, setIsUpdating] = useState(false);
+    const [selectedFile, setSelectedFile] = useState<{ file: AbstractFile; abstract: Abstract } | null>(null);
 
     useEffect(() => {
         if (token && id) fetchAbstract();
@@ -214,15 +236,26 @@ const AdminAbstractDetail = () => {
                                                     </p>
                                                 </div>
                                             </div>
-                                            <a
-                                                href={file.url}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="ml-3 flex-shrink-0 p-2 hover:bg-gray-200 rounded-lg"
-                                                title="Download"
-                                            >
-                                                <Download className="w-4 h-4 text-gray-600" />
-                                            </a>
+                                            <div className="ml-3 flex items-center gap-2 flex-shrink-0">
+                                                {getFileTypeFromMimeType(file.mimeType) && (
+                                                    <button
+                                                        onClick={() => setSelectedFile({ file, abstract })}
+                                                        className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                                        title="Preview file"
+                                                    >
+                                                        <Eye className="w-4 h-4 text-gray-600" />
+                                                    </button>
+                                                )}
+                                                <a
+                                                    href={file.url}
+                                                    download={file.originalName}
+                                                    rel="noopener noreferrer"
+                                                    className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                                    title="Download"
+                                                >
+                                                    <Download className="w-4 h-4 text-gray-600" />
+                                                </a>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -348,6 +381,26 @@ const AdminAbstractDetail = () => {
                     </motion.div>
                 </div>
             </div>
+
+            {selectedFile && (
+                <FilePreviewModal
+                    abstract={{
+                        title: selectedFile.abstract.projectTitle,
+                        author: selectedFile.abstract.teacherName,
+                        email: selectedFile.abstract.teacherEmail,
+                        category: selectedFile.abstract.projectCategory,
+                        description: selectedFile.abstract.projectDescription,
+                        fileType: getFileTypeFromMimeType(selectedFile.file.mimeType),
+                        viewUrl: selectedFile.file.url,
+                        downloadUrl: selectedFile.file.url,
+                        fileName: selectedFile.file.originalName,
+                        fileSize: selectedFile.file.size,
+                        submittedAt: selectedFile.abstract.submittedAt,
+                        status: selectedFile.abstract.status,
+                    }}
+                    onClose={() => setSelectedFile(null)}
+                />
+            )}
         </AdminLayout>
     );
 };
