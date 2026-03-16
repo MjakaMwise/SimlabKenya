@@ -1352,29 +1352,68 @@ Vite proxies `/api/*` requests to `localhost:5000` in development.
 
 ### Environment Variables
 
-```bash
-# Supabase
-VITE_SUPABASE_URL=https://xxx.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
+All variables must be set in Vercel → Project Settings → Environment Variables (and locally in `.env`). The `.env` file must **never** be committed to GitHub.
 
-# Firebase Admin SDK (from service account JSON)
+```bash
+# ── Supabase ──────────────────────────────────────────────
+# Project Settings → API
+VITE_SUPABASE_PROJECT_ID=your-project-ref-id
+VITE_SUPABASE_URL=https://your-project-ref.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJ...   # anon / public key
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...  # service role key (backend only)
+
+# ── Cloudinary ────────────────────────────────────────────
+# cloudinary.com → Dashboard
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-api-key
+CLOUDINARY_API_SECRET=your-api-secret
+# Used by the frontend upload preset (if applicable)
+VITE_CLOUDINARY_CLOUD_NAME=your-cloud-name
+VITE_CLOUDINARY_UPLOAD_PRESET=your-upload-preset
+
+# ── Gmail SMTP ────────────────────────────────────────────
+# myaccount.google.com → Security → App Passwords
+# Use an App Password — NOT your Gmail login password
+GMAIL_USER=simlabkenya@gmail.com
+GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx   # 16-character app password
+
+# ── Admin config ─────────────────────────────────────────
+ADMIN_EMAIL=simlabkenya@gmail.com
+ADMIN_DASHBOARD_URL=https://your-vercel-app.vercel.app/admin
+
+# ── Firebase (Frontend — Vite requires VITE_ prefix) ─────
+# console.firebase.google.com → Project Settings → General
+# → Your Apps → Web App → Config
+VITE_FIREBASE_API_KEY=AIza...
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+VITE_FIREBASE_APP_ID=1:your-sender-id:web:your-app-id
+VITE_FIREBASE_MEASUREMENT_ID=G-XXXXXXXXXX
+
+# ── Firebase Admin SDK (Backend only) ────────────────────
+# console.firebase.google.com → Project Settings
+# → Service Accounts → Generate New Private Key
+# Values come from the downloaded JSON file
 FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxx@your-project.iam.gserviceaccount.com
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nMIIE...\n-----END PRIVATE KEY-----\n"
 
-# Cloudinary
-CLOUDINARY_CLOUD_NAME=your-cloud-name
-CLOUDINARY_API_KEY=123456789
-CLOUDINARY_API_SECRET=your-secret
-
-# Gmail (use an App Password, not your account password)
-GMAIL_USER=simlabkenya@gmail.com
-GMAIL_APP_PASSWORD=xxxx xxxx xxxx xxxx
-
-# Optional
-ADMIN_DASHBOARD_URL=https://simlabkenya.co.ke/admin
+# ── App config ────────────────────────────────────────────
+PORT=5000           # local dev only — Vercel sets its own port
+NODE_ENV=development  # Vercel sets this to "production" automatically
 ```
+
+**Notes on specific variables:**
+
+| Variable | Important detail |
+|----------|-----------------|
+| `SUPABASE_SERVICE_ROLE_KEY` | Backend only — never expose to the browser. Bypasses RLS. |
+| `FIREBASE_PRIVATE_KEY` | Paste the full PEM string including `-----BEGIN/END PRIVATE KEY-----`. Vercel handles multiline values correctly. |
+| `GMAIL_APP_PASSWORD` | Must be a 16-character Google App Password, not your Gmail login password. Generate at myaccount.google.com → Security → 2-Step Verification → App Passwords. |
+| `ADMIN_DASHBOARD_URL` | Update to your actual Vercel deployment URL after first deploy. Used in admin notification email links. |
+| `VITE_` prefix | Any variable the React frontend needs must be prefixed with `VITE_`. Variables without this prefix are backend-only and are never bundled into the browser build. |
 
 ### Vercel Deployment
 

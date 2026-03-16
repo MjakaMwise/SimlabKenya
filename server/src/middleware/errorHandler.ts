@@ -6,9 +6,9 @@ export const errorHandler = (
   res: Response,
   _next: NextFunction
 ) => {
-  console.error('[Error]', err.message);
+  console.error('[Error]', err.stack ?? err.message);
   res.status(500).json({
     error: 'Internal server error',
-    details: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    details: err.message, // temporary — remove once root cause is identified
   });
 };
