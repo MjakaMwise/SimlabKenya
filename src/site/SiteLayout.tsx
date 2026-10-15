@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
 import "./site.css";
 import { Icon } from "./Icon";
 import { Go } from "./ui";
@@ -7,6 +8,7 @@ import { NAV, IMG, EMAIL, PHONE, TEL, WEB, SOCIAL, wa } from "./data";
 import { SiteContext } from "./SiteContext";
 import { ProgramPopup, PopReq } from "./ProgramPopup";
 import { Announcement } from "./Announcement";
+import LoadingScreen from "./LoadingScreen";
 
 const HOME_TITLE = "SIM-Lab Kenya | Science in Motion - STEM Education & Innovation Lab";
 
@@ -42,6 +44,15 @@ export default function SiteLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pop, setPop] = useState<PopReq | null>(null);
   const [ann, setAnn] = useState(false);
+  // loading animation: first visit to the home page in a session
+  const [loading, setLoading] = useState(() => {
+    if (pathname !== "/") return false;
+    try { return !sessionStorage.getItem("simlab-loaded"); } catch { return true; }
+  });
+  const finishLoading = useCallback(() => {
+    try { sessionStorage.setItem("simlab-loaded", "true"); } catch { /* storage unavailable */ }
+    setLoading(false);
+  }, []);
   const [toastMsg, setToastMsg] = useState("");
   const [toastOn, setToastOn] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -81,14 +92,14 @@ export default function SiteLayout() {
 
   // launch notice, once per session, on the home page
   useEffect(() => {
-    if (pathname !== "/") return;
+    if (loading || pathname !== "/") return;
     const t = setTimeout(() => {
       try { if (sessionStorage.getItem("annOS")) return; } catch { /* storage unavailable */ }
       setAnn(true);
     }, 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loading]);
 
   const toggleTheme = () => {
     const dk = matchMedia("(prefers-color-scheme:dark)").matches;
@@ -98,6 +109,8 @@ export default function SiteLayout() {
 
   return (
     <SiteContext.Provider value={ctx}>
+      {/* outside .sl so the loader keeps its own (Tailwind) styling */}
+      <AnimatePresence>{loading && <LoadingScreen onComplete={finishLoading} />}</AnimatePresence>
       <div className="sl" data-theme={theme}>
         <header>
           <div className="wrap">
