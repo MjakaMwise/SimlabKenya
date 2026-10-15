@@ -63,7 +63,7 @@ const About = () => (
       </div>
     </section>
     <Cta pill="PARTNER" title="Proud Partner of IOME001 Innovation Hub" text="Ready to start your innovation journey? Talk to the team.">
-      <Go to="/ocean-shujaa" cls="go xl">Join Ocean Shujaa</Go>
+      <Go to="/oceanshujaa" cls="go xl">Join Ocean Shujaa</Go>
       <Go to="/contact" cls="lt xl">Contact Us</Go>
     </Cta>
   </>
