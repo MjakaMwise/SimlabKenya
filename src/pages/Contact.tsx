@@ -1,341 +1,76 @@
-import { motion } from "framer-motion";
-import { useState } from "react";
-import {
-  Mail,
-  Phone,
-  MapPin,
-  MessageCircle,
-  Send,
-  Clock,
-  Facebook,
-  Instagram,
-  Twitter,
-  Linkedin,
-  Youtube,
-} from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import PageHero from "@/components/PageHero";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
+import { FormEvent } from "react";
+import { Icon } from "@/site/Icon";
+import { PageHead, WaBtn, CallBtn } from "@/site/ui";
+import { useSite } from "@/site/SiteContext";
+import { EMAIL, PHONE, TEL, WEB } from "@/site/data";
+
+const INFO: [string, string, string][] = [["mail", "#5dade2", "Email"], ["phone", "#22a06b", "Phone"], ["pin", "#d9568f", "Location"], ["clock", "#f08a24", "Working Hours"]];
 
 const Contact = () => {
-  const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useSite();
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
-    }));
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    // Simulate form submission
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    toast({
-      title: "Message Sent!",
-      description: "We'll get back to you within 24 hours.",
-    });
-
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
-    });
-    setIsSubmitting(false);
+    const f = e.currentTarget;
+    for (const el of f.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>("[required]")) {
+      const bad = !el.value.trim() || (el.type === "email" && !/^\S+@\S+\.\S+$/.test(el.value));
+      if (bad) {
+        el.focus();
+        toast(el.type === "email" ? "Enter a valid email address." : "Fill in the " + (el.closest("label")?.firstChild?.textContent || "required").toLowerCase() + " field.");
+        return;
+      }
+    }
+    // There is no contact-form backend yet, so hand the message to the visitor's email app
+    // rather than pretending it was sent.
+    const v = (n: string) => (f.elements.namedItem(n) as HTMLInputElement).value.trim();
+    const body = `${v("message")}\n\n${v("name")}\n${v("email")}${v("phone") ? "\n" + v("phone") : ""}`;
+    window.location.href = `mailto:${EMAIL}?subject=${encodeURIComponent(v("subject"))}&body=${encodeURIComponent(body)}`;
+    f.reset();
+    toast("Opening your email app. If nothing opens, message us on WhatsApp.");
   };
-
-  const handleWhatsApp = () => {
-    const message = encodeURIComponent(
-      "Hello SIM-Lab, I would like to learn more about your programs."
-    );
-    window.open(`https://wa.me/254738668529?text=${message}`, "_blank");
-  };
-
-  const socialLinks = [
-    { icon: Facebook, href: "#", label: "Facebook" },
-    { icon: Instagram, href: "#", label: "Instagram" },
-    { icon: Twitter, href: "#", label: "Twitter" },
-    { icon: Linkedin, href: "#", label: "LinkedIn" },
-    { icon: Youtube, href: "#", label: "YouTube" },
-  ];
 
   return (
     <>
-      <Navbar />
-      <main>
-        <PageHero
-          title="Contact Us"
-          subtitle="Ready to start your innovation journey? Get in touch!"
-        />
-
-        <section className="section-padding bg-white">
-          <div className="container-custom">
-            <div className="grid lg:grid-cols-2 gap-12">
-              {/* Contact Form */}
-              <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6 }}
-              >
-                <h2 className="text-2xl font-heading font-bold text-primary mb-6">
-                  Send Us a Message
-                </h2>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="name"
-                        className="block text-sm font-medium text-foreground mb-2"
-                      >
-                        Your Name *
-                      </label>
-                      <Input
-                        id="name"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
-                        placeholder="John Doe"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="email"
-                        className="block text-sm font-medium text-foreground mb-2"
-                      >
-                        Email Address *
-                      </label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={handleChange}
-                        placeholder="john@example.com"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="phone"
-                        className="block text-sm font-medium text-foreground mb-2"
-                      >
-                        Phone Number
-                      </label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        placeholder="+254 7XX XXX XXX"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="subject"
-                        className="block text-sm font-medium text-foreground mb-2"
-                      >
-                        Subject *
-                      </label>
-                      <Input
-                        id="subject"
-                        name="subject"
-                        value={formData.subject}
-                        onChange={handleChange}
-                        placeholder="Program inquiry"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="message"
-                      className="block text-sm font-medium text-foreground mb-2"
-                    >
-                      Your Message *
-                    </label>
-                    <Textarea
-                      id="message"
-                      name="message"
-                      value={formData.message}
-                      onChange={handleChange}
-                      placeholder="Tell us how we can help you..."
-                      rows={5}
-                      required
-                    />
-                  </div>
-                  <Button
-                    type="submit"
-                    variant="cta"
-                    size="lg"
-                    className="w-full"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      "Sending..."
-                    ) : (
-                      <>
-                        <Send className="w-5 h-5" />
-                        Send Message
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </motion.div>
-
-              {/* Contact Info */}
-              <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              >
-                <h2 className="text-2xl font-heading font-bold text-primary mb-6">
-                  Contact Information
-                </h2>
-
-                <div className="space-y-6 mb-8">
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-secondary/10 rounded-xl">
-                      <Mail className="w-6 h-6 text-secondary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">Email</h3>
-                      <a
-                        href="mailto:simlabkenya@gmail.com"
-                        className="text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        simlabkenya@gmail.com
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-secondary/10 rounded-xl">
-                      <Phone className="w-6 h-6 text-secondary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">Phone</h3>
-                      <a
-                        href="tel:+254738668529"
-                        className="block text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        +254 738 668529
-                      </a>
-                      <a
-                        href="tel:+254118636095"
-                        className="block text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        +254 118 636095
-                      </a>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-secondary/10 rounded-xl">
-                      <MapPin className="w-6 h-6 text-secondary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">Location</h3>
-                      <p className="text-muted-foreground">
-                        IOME001 Innovation Hub
-                        <br />
-                        Mombasa, Kenya
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4">
-                    <div className="p-3 bg-secondary/10 rounded-xl">
-                      <Clock className="w-6 h-6 text-secondary" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">
-                        Working Hours
-                      </h3>
-                      <p className="text-muted-foreground">
-                        Monday - Friday: 8:00 AM - 5:00 PM
-                        <br />
-                        Saturday: 9:00 AM - 1:00 PM
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Quick Contact */}
-                <div className="bg-muted p-6 rounded-2xl mb-8">
-                  <h3 className="font-heading font-bold text-primary mb-4">
-                    Quick Contact
-                  </h3>
-                  <Button
-                    variant="whatsapp"
-                    size="lg"
-                    className="w-full"
-                    onClick={handleWhatsApp}
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    Chat on WhatsApp
-                  </Button>
-                </div>
-
-                {/* Social Links */}
-                <div>
-                  <h3 className="font-heading font-bold text-primary mb-4">
-                    Follow Us
-                  </h3>
-                  <div className="flex gap-3">
-                    {socialLinks.map((social) => (
-                      <a
-                        key={social.label}
-                        href={social.href}
-                        aria-label={social.label}
-                        className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
-                      >
-                        <social.icon size={20} />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </section>
-
-        {/* Map Placeholder */}
-        <section className="bg-muted">
-          <div className="container-custom py-8">
-            <div className="bg-primary/10 rounded-2xl h-64 flex items-center justify-center">
-              <div className="text-center">
-                <MapPin className="w-12 h-12 text-primary mx-auto mb-4" />
-                <p className="text-muted-foreground">
-                  IOME001 Innovation Hub, Mombasa, Kenya
-                </p>
+      <PageHead title="Contact Us" sub="Ready to start your innovation journey? Get in touch!" />
+      <section className="sec">
+        <div className="wrap cols">
+          <div>
+            <h2 className="h2" style={{ fontSize: "1.8rem", marginBottom: 22 }}>Send Us a Message</h2>
+            <form onSubmit={submit} noValidate>
+              <div className="two">
+                <label htmlFor="f-name">Full Name<input type="text" id="f-name" name="name" required autoComplete="name" /></label>
+                <label htmlFor="f-email">Email<input type="email" id="f-email" name="email" required autoComplete="email" /></label>
               </div>
+              <div className="two">
+                <label htmlFor="f-phone">Phone<input type="tel" id="f-phone" name="phone" autoComplete="tel" /></label>
+                <label htmlFor="f-subject">Subject<input type="text" id="f-subject" name="subject" required /></label>
+              </div>
+              <label htmlFor="f-msg">Message<textarea id="f-msg" name="message" required /></label>
+              <div><button className="btn go xl" type="submit">Send Message</button></div>
+              <p className="note">Sending opens your email app with the message ready to go. For a faster reply, use WhatsApp.</p>
+            </form>
+          </div>
+          <div>
+            <h2 className="h2" style={{ fontSize: "1.8rem", marginBottom: 22 }}>Contact Information</h2>
+            {INFO.map(([ic, c, h]) => (
+              <div className="crow" key={h}>
+                <div className="ico" style={{ "--c": c } as React.CSSProperties}><Icon name={ic} /></div>
+                <div>
+                  <h3>{h}</h3>
+                  {h === "Email" && <a href={`mailto:${EMAIL}`}>{EMAIL}</a>}
+                  {h === "Phone" && (<><a href={TEL}>{PHONE}</a><a href={WEB} target="_blank" rel="noopener noreferrer">simlabkenya.co.ke</a></>)}
+                  {h === "Location" && <p>IOME001 Innovation Hub, Mombasa, Kenya</p>}
+                  {h === "Working Hours" && (<><p>Monday to Friday: 8:00 AM to 5:00 PM</p><p>Saturday: 9:00 AM to 1:00 PM</p></>)}
+                </div>
+              </div>
+            ))}
+            <div className="card" style={{ background: "var(--panel2)", border: 0 }}>
+              <h3 style={{ color: "var(--head)", marginBottom: 12 }}>Quick Contact</h3>
+              <div className="row"><WaBtn label="WhatsApp" /><CallBtn label="Call Us" /></div>
             </div>
           </div>
-        </section>
-      </main>
-      <Footer />
+        </div>
+      </section>
     </>
   );
 };

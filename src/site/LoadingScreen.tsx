@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { IMG } from "./data";
 
 interface LoadingScreenProps {
   onComplete: () => void;
@@ -10,7 +11,7 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
 
   useEffect(() => {
     const skipTimer = setTimeout(() => setShowSkip(true), 1000);
-    const completeTimer = setTimeout(() => onComplete(), 3000);
+    const completeTimer = setTimeout(() => onComplete(), 3600);
 
     return () => {
       clearTimeout(skipTimer);
@@ -19,12 +20,12 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
   }, [onComplete]);
 
   return (
-    <AnimatePresence>
+    <>
       <motion.div
         initial={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.5 }}
-        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-primary"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-primary pb-28"
       >
         {/* Flask Animation */}
         <motion.div
@@ -119,6 +120,19 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
           Science in Motion
         </motion.p>
 
+        {/* Ocean Shujaa */}
+        <div className="absolute inset-x-0 bottom-5 flex justify-center pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 1.9 }}
+            className="flex flex-col items-center"
+          >
+            <span className="text-white/70 text-[10px] tracking-[0.3em] uppercase font-medium">New holiday program</span>
+            <img src={IMG.ostl} alt="Ocean Shujaa" width={704} height={477} className="h-20 md:h-24 w-auto" />
+          </motion.div>
+        </div>
+
         {/* Skip Button */}
         <AnimatePresence>
           {showSkip && (
@@ -127,14 +141,14 @@ const LoadingScreen = ({ onComplete }: LoadingScreenProps) => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={onComplete}
-              className="absolute bottom-8 right-8 text-white/60 hover:text-white text-sm transition-colors"
+              className="absolute top-6 right-6 text-white/60 hover:text-white text-sm transition-colors"
             >
               Skip →
             </motion.button>
           )}
         </AnimatePresence>
       </motion.div>
-    </AnimatePresence>
+    </>
   );
 };
 
