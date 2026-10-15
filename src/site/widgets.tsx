@@ -186,7 +186,7 @@ export function SunWidget() {
     <div className="scr">
       <div className="bar"><span>Solar panel, 4&deg; S</span><span>Experiment D</span></div>
       <div className="bd">
-        <div className="split2" style={{ gridTemplateColumns: "minmax(0,240px) minmax(0,1fr)" }}>
+        <div className="split2 split-sun">
           <svg viewBox="0 0 240 150" style={{ width: "100%", height: "auto" }} aria-hidden="true">
             <path d="M20 130A100 100 0 0 1 220 130" fill="none" stroke="#1f4a5e" strokeDasharray="3 5" />
             <line x1="10" y1="130" x2="230" y2="130" stroke="#5a8499" />
