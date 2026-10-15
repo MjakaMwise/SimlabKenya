@@ -31,7 +31,7 @@ const Index = () => (
           <h1>SIM-Lab <em>Kenya</em></h1>
           <p className="sub">Empowering a new generation of science-minded individuals driving innovation and sustainable development in Kenya and beyond</p>
           <div className="row">
-            <Go to="/ocean-shujaa" cls="go xl">Join Us Today</Go>
+            <Go to="/oceanshujaa" cls="go xl">Join Us Today</Go>
             <Go to="/programs" cls="lt xl">Explore Programs</Go>
           </div>
           <div className="stats">
@@ -65,7 +65,7 @@ const Index = () => (
       title="Ocean Shujaa: From the Ocean to the Laboratory"
       text="Five days of real ocean science. Sample the sea and the mangroves, analyse your samples in professional labs in Mombasa, then present your findings. For primary school to college students."
     >
-      <Go to="/ocean-shujaa" cls="go xl">Explore Ocean Shujaa</Go>
+      <Go to="/oceanshujaa" cls="go xl">Explore Ocean Shujaa</Go>
     </Cta>
 
     <section className="sec">

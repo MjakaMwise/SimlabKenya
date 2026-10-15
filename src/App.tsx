@@ -48,12 +48,14 @@ const App = () => (
                 <Route path="/bench" element={<Bench />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/programs" element={<Programs />} />
-                <Route path="/ocean-shujaa" element={<OceanShujaa />} />
+                <Route path="/oceanshujaa" element={<OceanShujaa />} />
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/contact" element={<Contact />} />
               </Route>
-              <Route path="/holiday-program" element={<Navigate to="/ocean-shujaa" replace />} />
+              {/* older links */}
+              <Route path="/holiday-program" element={<Navigate to="/oceanshujaa" replace />} />
+              <Route path="/ocean-shujaa" element={<Navigate to="/oceanshujaa" replace />} />
 
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />

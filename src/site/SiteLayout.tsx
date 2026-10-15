@@ -116,7 +116,7 @@ export default function SiteLayout() {
                 ))}
               </div>
               <div className="tools">
-                <Go to="/ocean-shujaa">Register Now</Go>
+                <Go to="/oceanshujaa">Register Now</Go>
                 <button className="ib" onClick={toggleTheme} aria-label="Toggle dark mode"><Icon name="moon" /></button>
                 <button className="ib" id="burger" onClick={() => setMenuOpen((o) => !o)} aria-label="Open menu" aria-expanded={menuOpen}><Icon name="menu" /></button>
               </div>
@@ -128,7 +128,7 @@ export default function SiteLayout() {
                   {f === 2 && <span className="new">NEW</span>}
                 </Link>
               ))}
-              <Go to="/ocean-shujaa">Register Now</Go>
+              <Go to="/oceanshujaa">Register Now</Go>
             </div>
           </div>
         </header>
