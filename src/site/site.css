@@ -551,3 +551,6 @@
 /* solar widget: wider drawing column on desktop, stacked on phones */
 .sl .split-sun{grid-template-columns:minmax(0,240px) minmax(0,1fr)}
 @media(max-width:560px){.sl .split-sun{grid-template-columns:1fr}}
+
+/* the pop-up's side and body panels are stacked above the close button; lift the button so it can be clicked */
+.sl .pclose{z-index:5}
