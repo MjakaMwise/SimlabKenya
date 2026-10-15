@@ -7,7 +7,6 @@ import { Go } from "./ui";
 import { NAV, IMG, EMAIL, PHONE, TEL, WEB, SOCIAL, wa } from "./data";
 import { SiteContext } from "./SiteContext";
 import { ProgramPopup, PopReq } from "./ProgramPopup";
-import { Announcement } from "./Announcement";
 import LoadingScreen from "./LoadingScreen";
 
 const HOME_TITLE = "SIM-Lab Kenya | Science in Motion - STEM Education & Innovation Lab";
@@ -43,7 +42,6 @@ export default function SiteLayout() {
   const [theme, setTheme] = useState<string | undefined>();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pop, setPop] = useState<PopReq | null>(null);
-  const [ann, setAnn] = useState(false);
   // loading animation: first visit to the home page in a session
   const [loading, setLoading] = useState(() => {
     if (pathname !== "/") return false;
@@ -89,17 +87,6 @@ export default function SiteLayout() {
     if (!main) return;
     return addFades(main, document.querySelector(".sl footer"));
   }, [pathname]);
-
-  // launch notice, once per session, on the home page
-  useEffect(() => {
-    if (loading || pathname !== "/") return;
-    const t = setTimeout(() => {
-      try { if (sessionStorage.getItem("annOS")) return; } catch { /* storage unavailable */ }
-      setAnn(true);
-    }, 700);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading]);
 
   const toggleTheme = () => {
     const dk = matchMedia("(prefers-color-scheme:dark)").matches;
@@ -188,7 +175,6 @@ export default function SiteLayout() {
         </footer>
 
         {pop && <ProgramPopup key={pop.id} req={pop} onClosed={() => setPop(null)} />}
-        {ann && <Announcement onDone={() => setAnn(false)} />}
         <div id="toast" role="status" className={toastOn ? "show" : ""}>{toastMsg}</div>
       </div>
     </SiteContext.Provider>

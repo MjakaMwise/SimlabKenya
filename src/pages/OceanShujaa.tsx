@@ -31,6 +31,8 @@ const OceanShujaa = () => {
   return (
     <>
       <section className="os-hero">
+        <div className="bgimg"><img src={IMG.a3} alt="" /></div>
+        <div className="hexbg" />
         <div className="os-waves" aria-hidden="true">
           <svg viewBox="0 0 2880 160" preserveAspectRatio="none">
             <path className="wv wv1" d="M0 80C240 30 480 30 720 80S1200 130 1440 80 1920 30 2160 80 2640 130 2880 80V160H0Z" />
