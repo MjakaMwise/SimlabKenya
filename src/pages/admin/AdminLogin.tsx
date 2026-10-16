@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
@@ -14,133 +14,35 @@ const AdminLogin = () => {
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [otpInitError, setOtpInitError] = useState("");
-    const [otpSending, setOtpSending] = useState(false);
-    const [otpSentTo, setOtpSentTo] = useState<string | null>(null);
     const {
-        signIn,
-        signOut,
-        user,
-        isAdmin,
-        isMfaVerified,
-        setMfaVerified,
+        signIn, resendOtp, verifyOtp, cancelOtp,
+        user, isAdmin, isMfaVerified, awaitingOtp, pendingEmail,
         isLoading: authLoading,
     } = useAdminAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const otpEmail = user?.email || email;
-    const shouldShowOtp = !!user && isAdmin && !isMfaVerified;
+    const shouldShowOtp = awaitingOtp && !isMfaVerified;
 
     useEffect(() => {
         if (!authLoading && user && isAdmin && isMfaVerified) {
             navigate("/admin");
         }
-
-        if (!authLoading && user && !isAdmin) {
-            setError("You don't have admin access. Please contact support.");
-            void signOut();
-        }
-
-        const errorParam = searchParams.get("error");
-        if (errorParam === "unauthorized") {
+        if (searchParams.get("error") === "unauthorized") {
             setError("You don't have admin access. Please contact support.");
         }
-    }, [user, isAdmin, isMfaVerified, authLoading, navigate, searchParams, signOut]);
-
-    const sendOtp = useCallback(async () => {
-        if (!otpEmail) {
-            const err = new Error("Missing email address");
-            setOtpInitError(err.message);
-            return { error: err };
-        }
-
-        setOtpSending(true);
-        setOtpInitError("");
-
-        try {
-            const response = await fetch("/api/admin/send-otp", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: otpEmail }),
-            });
-
-            const data = await response.json().catch(() => null);
-            if (!response.ok) {
-                throw new Error(data?.error || "Failed to send verification code");
-            }
-
-            setOtpSentTo(otpEmail);
-            return { error: null };
-        } catch (err) {
-            const errorMessage =
-                err instanceof Error ? err.message : "Failed to send verification code";
-            setOtpInitError(errorMessage);
-            return { error: err as Error };
-        } finally {
-            setOtpSending(false);
-        }
-    }, [otpEmail]);
-
-    useEffect(() => {
-        if (!shouldShowOtp) {
-            setOtpInitError("");
-            setOtpSentTo(null);
-            return;
-        }
-
-        if (!otpEmail) return;
-        if (otpSentTo === otpEmail) return;
-
-        void sendOtp();
-    }, [shouldShowOtp, otpEmail, otpSentTo, sendOtp]);
+    }, [user, isAdmin, isMfaVerified, authLoading, navigate, searchParams]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
         setIsLoading(true);
-
         try {
             const { error } = await signIn(email, password);
-            if (error) {
-                setError(error.message);
-                return;
-            }
-
-            await sendOtp();
+            if (error) setError(error.message);
+            else setPassword("");
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleVerifyOtp = async (code: string) => {
-        if (!otpEmail) {
-            return { error: new Error("Missing email address") };
-        }
-
-        try {
-            const response = await fetch("/api/admin/verify-otp", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: otpEmail, otp: code }),
-            });
-
-            const data = await response.json().catch(() => null);
-            if (!response.ok) {
-                throw new Error(data?.error || "Failed to verify code");
-            }
-
-            setMfaVerified(true);
-            return { error: null };
-        } catch (err) {
-            return { error: err as Error };
-        }
-    };
-
-    const handleCancelOtp = async () => {
-        setMfaVerified(false);
-        setOtpSentTo(null);
-        setOtpInitError("");
-        await signOut();
     };
 
     if (authLoading) {
@@ -170,7 +72,7 @@ const AdminLogin = () => {
                             Admin Panel
                         </h1>
                         <p className="text-primary-foreground/80 text-sm mt-1">
-                            SIM-Lab Kenya Shop Management
+                            SIM-Lab Kenya Administration
                         </p>
                     </div>
 
@@ -178,22 +80,11 @@ const AdminLogin = () => {
                     <div className="p-6 space-y-4">
                         {shouldShowOtp ? (
                             <>
-                                {otpInitError && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: -10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg text-sm"
-                                    >
-                                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                                        {otpInitError}
-                                    </motion.div>
-                                )}
-                                <OTPVerification
-                                    email={otpEmail}
-                                    onVerify={handleVerifyOtp}
-                                    onResend={sendOtp}
-                                    onCancel={handleCancelOtp}
-                                    isLoading={otpSending}
+                                                                <OTPVerification
+                                    email={pendingEmail ?? email}
+                                    onVerify={verifyOtp}
+                                    onResend={resendOtp}
+                                    onCancel={cancelOtp}
                                     onSuccess={() => navigate("/admin")}
                                 />
                             </>

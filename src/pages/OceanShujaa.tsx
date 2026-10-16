@@ -4,6 +4,7 @@ import { SectionHead, IconCards, CheckList, WaBtn } from "@/site/ui";
 import { Timeline, TLItem } from "@/site/Timeline";
 import { objHtmlC } from "@/site/sci";
 import { IMG, EMAIL, OS_DAYS } from "@/site/data";
+import RegisterForm from "@/site/RegisterForm";
 
 const REG = "Hello SIM-Lab, I would like to register for the Ocean Shujaa holiday program.";
 const LABS: [string, string, string][] = [
@@ -137,6 +138,13 @@ const OceanShujaa = () => {
               "A chance to present their projects to scientists, educators and other stakeholders for feedback",
             ]} />
           </div>
+        </div>
+      </section>
+
+      <section className="sec alt" id="register">
+        <div className="wrap">
+          <SectionHead title="Register for Ocean Shujaa" lede="Fill in the form and we will contact you to confirm your place. You can also register on WhatsApp or by phone below." />
+          <RegisterForm />
         </div>
       </section>
 

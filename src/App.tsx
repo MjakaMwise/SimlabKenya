@@ -29,6 +29,7 @@ import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminAbstracts from "./pages/admin/AdminAbstracts";
 import AdminAbstractDetail from "./pages/admin/AdminAbstractDetail";
+import AdminOceanShujaa from "./pages/admin/AdminOceanShujaa";
 import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
@@ -104,6 +105,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <AdminAbstractDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/ocean-shujaa"
+                element={
+                  <ProtectedRoute>
+                    <AdminOceanShujaa />
                   </ProtectedRoute>
                 }
               />

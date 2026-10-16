@@ -1,118 +1,116 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from "@supabase/supabase-js";
+import { createContext, useContext, useState, ReactNode } from "react";
+
+interface AdminUser {
+    id: string;
+    email: string;
+}
+
+interface Result {
+    error: Error | null;
+}
 
 interface AdminAuthContextType {
-    user: User | null;
-    session: Session | null;
+    user: AdminUser | null;
     token: string | null;
     isLoading: boolean;
     isAdmin: boolean;
     isMfaVerified: boolean;
-    setMfaVerified: (value: boolean) => void;
-    signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
+    /** True after the password was accepted and a code was emailed, until the code is verified. */
+    awaitingOtp: boolean;
+    pendingEmail: string | null;
+    signIn: (email: string, password: string) => Promise<Result>;
+    resendOtp: () => Promise<Result>;
+    verifyOtp: (code: string) => Promise<Result>;
+    cancelOtp: () => void;
     signOut: () => Promise<void>;
 }
 
+const STORAGE_KEY = "adminSession";
+
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
+const loadSession = (): { token: string; user: AdminUser } | null => {
+    try {
+        const raw = sessionStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+        return null;
+    }
+};
+
+const post = async (path: string, body: unknown, bearer?: string) => {
+    const res = await fetch(`/api/admin/${path}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(bearer && { Authorization: `Bearer ${bearer}` }) },
+        body: JSON.stringify(body ?? {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+    return data;
+};
+
 export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
-    const [user, setUser] = useState<User | null>(null);
-    const [session, setSession] = useState<Session | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isAdmin, setIsAdmin] = useState(false);
-    const [isMfaVerified, setIsMfaVerified] = useState(false);
+    const [session, setSession] = useState(loadSession);
+    const [pending, setPending] = useState<{ token: string; email: string } | null>(null);
 
-    useEffect(() => {
-        const syncMfa = (activeSession: Session | null) => {
-            const userId = activeSession?.user?.id;
-            if (!userId) {
-                setIsMfaVerified(false);
-                return;
-            }
-            const key = `adminMfaVerified:${userId}`;
-            setIsMfaVerified(sessionStorage.getItem(key) === "true");
-        };
-
-        const ADMIN_EMAILS = ["simlabkenya@gmail.com"];
-
-        const resolveAdmin = (activeSession: Session | null) => {
-            if (!activeSession?.user?.email) {
-                setIsAdmin(false);
-                return;
-            }
-            setIsAdmin(ADMIN_EMAILS.includes(activeSession.user.email));
-        };
-
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            syncMfa(session);
-            resolveAdmin(session);
-            setIsLoading(false);
-        });
-
-        // Listen for auth changes
-        const {
-            data: { subscription },
-        } = supabase.auth.onAuthStateChange((_event, session) => {
-            setSession(session);
-            setUser(session?.user ?? null);
-            syncMfa(session);
-            resolveAdmin(session);
-            setIsLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
-
-    const signIn = async (email: string, password: string) => {
+    const signIn = async (email: string, password: string): Promise<Result> => {
         try {
-            const { error } = await supabase.auth.signInWithPassword({
-                email,
-                password,
-            });
-            if (error) throw error;
+            const data = await post("login", { email, password });
+            setPending({ token: data.pendingToken, email: data.email });
             return { error: null };
         } catch (error) {
             return { error: error as Error };
         }
     };
 
-    const signOut = async () => {
-        const userId = session?.user?.id ?? user?.id;
-        if (userId) {
-            sessionStorage.removeItem(`adminMfaVerified:${userId}`);
+    const resendOtp = async (): Promise<Result> => {
+        if (!pending) return { error: new Error("Please sign in again") };
+        try {
+            await post("resend-otp", {}, pending.token);
+            return { error: null };
+        } catch (error) {
+            return { error: error as Error };
         }
-        setIsMfaVerified(false);
-        await supabase.auth.signOut();
     };
 
-    const setMfaVerified = (value: boolean) => {
-        const userId = session?.user?.id ?? user?.id;
-        if (userId) {
-            const key = `adminMfaVerified:${userId}`;
-            if (value) {
-                sessionStorage.setItem(key, "true");
-            } else {
-                sessionStorage.removeItem(key);
-            }
+    const verifyOtp = async (code: string): Promise<Result> => {
+        if (!pending) return { error: new Error("Please sign in again") };
+        try {
+            const data = await post("verify-otp", { otp: code }, pending.token);
+            const next = { token: data.token as string, user: data.user as AdminUser };
+            try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch { /* storage blocked */ }
+            setSession(next);
+            setPending(null);
+            return { error: null };
+        } catch (error) {
+            return { error: error as Error };
         }
-        setIsMfaVerified(value);
     };
+
+    const cancelOtp = () => setPending(null);
+
+    const signOut = async () => {
+        try { sessionStorage.removeItem(STORAGE_KEY); } catch { /* storage blocked */ }
+        setSession(null);
+        setPending(null);
+    };
+
+    const signedIn = !!session;
 
     return (
         <AdminAuthContext.Provider
             value={{
-                user,
-                session,
-                token: session?.access_token ?? null,
-                isLoading,
-                isAdmin,
-                isMfaVerified,
-                setMfaVerified,
+                user: session?.user ?? null,
+                token: session?.token ?? null,
+                isLoading: false,
+                isAdmin: signedIn,
+                isMfaVerified: signedIn,
+                awaitingOtp: !!pending,
+                pendingEmail: pending?.email ?? null,
                 signIn,
+                resendOtp,
+                verifyOtp,
+                cancelOtp,
                 signOut,
             }}
         >
