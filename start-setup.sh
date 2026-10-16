@@ -7,7 +7,8 @@
 #   1. Preflight       OS, privileges, disk, memory
 #   2. Install         git, curl, openssl, ufw, Docker Engine + compose plugin (only if missing)
 #   3. Firewall        allow SSH, 80, 443 (ufw)
-#   4. Configure       create .env, generate secrets, ask for anything missing, validate
+#   4. Configure       create .env, generate missing secrets, prompt (existing values are the
+#                      default: Enter keeps them), validate. Existing values are never overwritten silently
 #   5. Pre-deploy checks  compose file, ports, DNS, SQL files, image build
 #   6. Deploy          database -> schema -> first admin -> api + web
 #   7. Post-deploy checks  containers healthy, API, tables, admin, HTTPS site
@@ -66,16 +67,24 @@ env_set() {
     $1==k && !d {print k "=" v; d=1; next} {print} END{if(!d) print k "=" v}' .env > "$tmp"
   cat "$tmp" > .env; rm -f "$tmp"
 }
-env_need() { # env_need KEY "prompt" [secret]
-  local k="$1" p="$2" secret="${3:-}" v
-  v="$(env_get "$k")"
-  [ -n "$v" ] && return 0
-  v="${!k:-}"                                  # allow KEY=value ./start-setup.sh
-  if [ -z "$v" ] && interactive; then
-    if [ -n "$secret" ]; then read -r -s -p "  $p: " v; echo; else read -r -p "  $p: " v; fi
+# env_need KEY "prompt" [secret]
+# Existing .env values are the default: Enter keeps them, typing a value changes them.
+# An exported KEY=value always wins. Non-interactive runs keep what is in .env.
+env_need() {
+  local k="$1" p="$2" secret="${3:-}" cur v hint=""
+  cur="$(env_get "$k")"
+  v="${!k:-}"
+  if [ -z "$v" ]; then
+    if interactive; then
+      if [ -n "$cur" ]; then
+        if [ -n "$secret" ]; then hint=" [Enter = keep existing]"; else hint=" [$cur]"; fi
+      fi
+      if [ -n "$secret" ]; then read -r -s -p "  $p$hint: " v; echo; else read -r -p "  $p$hint: " v; fi
+    fi
+    v="${v:-$cur}"
   fi
   [ -n "$v" ] || die "$k is empty. Set it in .env (or export it) and re-run."
-  env_set "$k" "$v"
+  if [ "$v" != "$cur" ]; then env_set "$k" "$v"; [ -z "$cur" ] || ok "Updated $k"; fi
 }
 
 # docker via sudo until the new group membership applies to this shell
@@ -171,14 +180,21 @@ if [ "$VERIFY_ONLY" -eq 0 ]; then
   [ -n "$(env_get POSTGRES_PASSWORD)" ] || { env_set POSTGRES_PASSWORD "$(openssl rand -hex 24)"; ok "Generated POSTGRES_PASSWORD"; }
   [ -n "$(env_get JWT_SECRET)" ]        || { env_set JWT_SECRET "$(openssl rand -hex 48)"; ok "Generated JWT_SECRET"; }
 
+  OLD_DOMAIN="$(env_get SITE_DOMAIN)"
   env_need SITE_DOMAIN "Domain name (e.g. simlabkenya.co.ke)"
   DOMAIN="$(env_get SITE_DOMAIN)"
-  [ -n "$(env_get SITE_ADDRESS)" ]     || env_set SITE_ADDRESS "$DOMAIN"
-  [ -n "$(env_get ALLOWED_ORIGINS)" ]  || env_set ALLOWED_ORIGINS "https://$DOMAIN,https://www.$DOMAIN"
-  [ -n "$(env_get ADMIN_DASHBOARD_URL)" ] || env_set ADMIN_DASHBOARD_URL "https://$DOMAIN/admin"
+  # Values derived from the domain follow it only if they were still the derived defaults
+  # (or empty); anything you customised by hand is left alone.
+  derive() { # derive KEY old_default new_default
+    local cur; cur="$(env_get "$1")"
+    if [ -z "$cur" ] || { [ -n "$OLD_DOMAIN" ] && [ "$cur" = "$2" ]; }; then
+      [ "$cur" = "$3" ] || env_set "$1" "$3"
+    fi
+  }
+  derive SITE_ADDRESS "$OLD_DOMAIN" "$DOMAIN"
+  derive ALLOWED_ORIGINS "https://$OLD_DOMAIN,https://www.$OLD_DOMAIN" "https://$DOMAIN,https://www.$DOMAIN"
+  derive ADMIN_DASHBOARD_URL "https://$OLD_DOMAIN/admin" "https://$DOMAIN/admin"
 
-  env_need VITE_SUPABASE_URL "Supabase URL (shop products/orders)"
-  env_need SUPABASE_SERVICE_ROLE_KEY "Supabase service-role key" secret
   env_need GMAIL_USER "Gmail address that sends emails (admin login codes)"
   env_need GMAIL_APP_PASSWORD "Gmail app password" secret
   [ -n "$(env_get ADMIN_EMAIL)" ] || env_set ADMIN_EMAIL "$(env_get GMAIL_USER)"
@@ -187,7 +203,7 @@ fi
 
 # validate (also runs in --verify-only)
 BAD=0
-for k in SITE_DOMAIN SITE_ADDRESS POSTGRES_PASSWORD JWT_SECRET VITE_SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY GMAIL_USER GMAIL_APP_PASSWORD; do
+for k in SITE_DOMAIN SITE_ADDRESS POSTGRES_PASSWORD JWT_SECRET GMAIL_USER GMAIL_APP_PASSWORD; do
   [ -n "$(env_get "$k")" ] || { printf '  %s✖%s %s is empty\n' "$R" "$N" "$k"; BAD=1; }
 done
 [ "$BAD" -eq 0 ] || die "Fill the empty values in .env and re-run."
@@ -201,7 +217,7 @@ ok ".env validated (permissions 600)"
 
 # ══════════════════════════════════════════════════════════════════════════════
 step "Verify before deploying"
-for f in db/init/001_ocean_shujaa.sql db/init/002_admin_auth.sql deploy/Caddyfile Dockerfile server/Dockerfile server/scripts/create-admin.ts; do
+for f in db/init/001_ocean_shujaa.sql db/init/002_admin_auth.sql db/init/003_shop.sql deploy/Caddyfile Dockerfile server/Dockerfile server/scripts/create-admin.ts; do
   [ -f "$f" ] || die "Missing project file: $f"
 done
 ok "Project files present"
@@ -310,6 +326,7 @@ api_status() { # api_status METHOD PATH EXPECTED_STATUS
 }
 db_scalar() { psql_db -At -c "$1"; }
 registrations_table() { [ "$(db_scalar "SELECT to_regclass('public.ocean_shujaa_registrations') IS NOT NULL")" = t ]; }
+shop_ready() { [ "$(db_scalar "SELECT to_regclass('public.orders') IS NOT NULL AND (SELECT count(*) FROM products) >= 0")" = t ]; }
 has_admin() { [ "$(db_scalar 'SELECT count(*) FROM admin_users')" -ge 1 ]; }
 postgres_private() { ! ss -ltn | grep -q ':5432 '; }
 
@@ -318,6 +335,7 @@ for i in $(seq 1 30); do api_status GET /api/health 200 >/dev/null 2>&1 && break
 
 check "api container answers /api/health"           api_status GET /api/health 200
 check "ocean_shujaa_registrations table exists"     registrations_table
+check "shop tables exist and catalogue is seeded"   shop_ready
 check "an admin account exists"                     has_admin
 check "public registration rejects bad input (400)" api_status POST /api/ocean-shujaa/registrations 400
 check "admin API refuses anonymous requests (401)"  api_status GET /api/ocean-shujaa/admin/registrations 401

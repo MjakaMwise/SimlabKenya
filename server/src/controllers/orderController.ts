@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import supabase from '../config/supabase.js';
+import pool from '../config/postgres.js';
 import { sendOrderEmails } from '../services/emailService.js';
 import { Order } from '../types/index.js';
 
@@ -38,98 +38,89 @@ const generateOrderNumber = (): string => {
   return `ORD-${dateStr}-${rand}`;
 };
 
+const isUuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v);
+
 // POST /api/orders — public
 export const createOrder = async (req: Request, res: Response) => {
   const parsed = createOrderSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });
   }
+  const d = parsed.data;
 
-  const orderData = {
-    ...parsed.data,
-    order_number: generateOrderNumber(),
-    order_status: 'pending',
-    payment_status: 'pending',
-  };
-
-  const { data, error } = await supabase
-    .from('orders')
-    .insert(orderData)
-    .select()
-    .single();
-
-  if (error) return res.status(500).json({ error: error.message });
-
-  // Send emails in background — don't block the response
-  sendOrderEmails(data as Order).catch((err) =>
-    console.error('[Order emails] Failed to send:', err.message)
-  );
-
-  res.status(201).json(data);
+  // Order numbers are random per day; retry on the (unlikely) unique-key collision.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const { rows } = await pool.query(
+        `INSERT INTO orders (order_number, customer_name, customer_email, customer_phone, delivery_method,
+                             delivery_location, delivery_address, items, total_amount, additional_notes)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,$10) RETURNING *`,
+        [generateOrderNumber(), d.customer_name, d.customer_email, d.customer_phone, d.delivery_method,
+         d.delivery_location ?? null, d.delivery_address ?? null, JSON.stringify(d.items), d.total_amount,
+         d.additional_notes ?? null]
+      );
+      // Send emails in background — don't block the response
+      sendOrderEmails(rows[0] as Order).catch((err) =>
+        console.error('[Order emails] Failed to send:', err.message)
+      );
+      return res.status(201).json(rows[0]);
+    } catch (err) {
+      if ((err as { code?: string }).code !== '23505') throw err;
+    }
+  }
+  res.status(500).json({ error: 'Could not allocate an order number, please retry' });
 };
 
 // GET /api/orders — admin only
 export const getOrders = async (req: Request, res: Response) => {
-  const { status, payment, limit = '50', offset = '0' } = req.query;
+  const { status, payment } = req.query;
+  const limit = Math.min(Math.max(parseInt(String(req.query.limit ?? '50'), 10) || 50, 1), 1000);
+  const offset = Math.max(parseInt(String(req.query.offset ?? '0'), 10) || 0, 0);
 
-  let query = supabase
-    .from('orders')
-    .select('*', { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .range(Number(offset), Number(offset) + Number(limit) - 1);
+  const where: string[] = [];
+  const params: unknown[] = [];
+  if (status) { params.push(String(status)); where.push(`order_status = $${params.length}`); }
+  if (payment) { params.push(String(payment)); where.push(`payment_status = $${params.length}`); }
+  const w = where.length ? 'WHERE ' + where.join(' AND ') : '';
 
-  if (status) query = query.eq('order_status', status as string);
-  if (payment) query = query.eq('payment_status', payment as string);
-
-  const { data, error, count } = await query;
-  if (error) return res.status(500).json({ error: error.message });
-
-  res.json({ orders: data, total: count });
+  const [list, count] = await Promise.all([
+    pool.query(`SELECT * FROM orders ${w} ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`, params),
+    pool.query(`SELECT count(*) AS total FROM orders ${w}`, params),
+  ]);
+  res.json({ orders: list.rows, total: count.rows[0].total });
 };
 
 // GET /api/orders/:id — admin only
 export const getOrder = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  const { data, error } = await supabase
-    .from('orders')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error || !data) return res.status(404).json({ error: 'Order not found' });
-  res.json(data);
+  const id = String(req.params.id);
+  if (!isUuid(id)) return res.status(404).json({ error: 'Order not found' });
+  const { rows } = await pool.query('SELECT * FROM orders WHERE id = $1', [id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Order not found' });
+  res.json(rows[0]);
 };
 
 // PATCH /api/orders/:id — admin only
 export const updateOrder = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
+  if (!isUuid(id)) return res.status(404).json({ error: 'Order not found' });
   const parsed = updateOrderSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });
   }
 
-  const updates: Record<string, unknown> = {
-    ...parsed.data,
-    updated_at: new Date().toISOString(),
-  };
-
+  const updates: Record<string, unknown> = { ...parsed.data };
   // Auto-set timestamps based on status transitions
-  if (parsed.data.order_status === 'contacted' && !parsed.data.contacted_at) {
-    updates.contacted_at = new Date().toISOString();
-  }
-  if (parsed.data.order_status === 'completed' && !parsed.data.completed_at) {
-    updates.completed_at = new Date().toISOString();
-  }
+  if (parsed.data.order_status === 'contacted' && !parsed.data.contacted_at) updates.contacted_at = new Date().toISOString();
+  if (parsed.data.order_status === 'completed' && !parsed.data.completed_at) updates.completed_at = new Date().toISOString();
 
-  const { data, error } = await supabase
-    .from('orders')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) return res.status(500).json({ error: error.message });
-  if (!data) return res.status(404).json({ error: 'Order not found' });
-  res.json(data);
+  const keys = Object.keys(updates).filter((k) => updates[k] !== undefined);
+  if (!keys.length) return res.status(400).json({ error: 'Nothing to update' });
+  const params = keys.map((k) => updates[k]);
+  params.push(id);
+  const { rows } = await pool.query(
+    `UPDATE orders SET ${keys.map((k, i) => `${k} = $${i + 1}`).join(', ')} WHERE id = $${params.length} RETURNING *`,
+    params
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Order not found' });
+  res.json(rows[0]);
 };
