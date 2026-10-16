@@ -7,7 +7,8 @@
 #   1. Preflight       OS, privileges, disk, memory
 #   2. Install         git, curl, openssl, ufw, Docker Engine + compose plugin (only if missing)
 #   3. Firewall        allow SSH, 80, 443 (ufw)
-#   4. Configure       create .env, generate secrets, ask for anything missing, validate
+#   4. Configure       create .env, generate missing secrets, prompt (existing values are the
+#                      default: Enter keeps them), validate. Existing values are never overwritten silently
 #   5. Pre-deploy checks  compose file, ports, DNS, SQL files, image build
 #   6. Deploy          database -> schema -> first admin -> api + web
 #   7. Post-deploy checks  containers healthy, API, tables, admin, HTTPS site
@@ -66,16 +67,24 @@ env_set() {
     $1==k && !d {print k "=" v; d=1; next} {print} END{if(!d) print k "=" v}' .env > "$tmp"
   cat "$tmp" > .env; rm -f "$tmp"
 }
-env_need() { # env_need KEY "prompt" [secret]
-  local k="$1" p="$2" secret="${3:-}" v
-  v="$(env_get "$k")"
-  [ -n "$v" ] && return 0
-  v="${!k:-}"                                  # allow KEY=value ./start-setup.sh
-  if [ -z "$v" ] && interactive; then
-    if [ -n "$secret" ]; then read -r -s -p "  $p: " v; echo; else read -r -p "  $p: " v; fi
+# env_need KEY "prompt" [secret]
+# Existing .env values are the default: Enter keeps them, typing a value changes them.
+# An exported KEY=value always wins. Non-interactive runs keep what is in .env.
+env_need() {
+  local k="$1" p="$2" secret="${3:-}" cur v hint=""
+  cur="$(env_get "$k")"
+  v="${!k:-}"
+  if [ -z "$v" ]; then
+    if interactive; then
+      if [ -n "$cur" ]; then
+        if [ -n "$secret" ]; then hint=" [Enter = keep existing]"; else hint=" [$cur]"; fi
+      fi
+      if [ -n "$secret" ]; then read -r -s -p "  $p$hint: " v; echo; else read -r -p "  $p$hint: " v; fi
+    fi
+    v="${v:-$cur}"
   fi
   [ -n "$v" ] || die "$k is empty. Set it in .env (or export it) and re-run."
-  env_set "$k" "$v"
+  if [ "$v" != "$cur" ]; then env_set "$k" "$v"; [ -z "$cur" ] || ok "Updated $k"; fi
 }
 
 # docker via sudo until the new group membership applies to this shell
@@ -171,11 +180,20 @@ if [ "$VERIFY_ONLY" -eq 0 ]; then
   [ -n "$(env_get POSTGRES_PASSWORD)" ] || { env_set POSTGRES_PASSWORD "$(openssl rand -hex 24)"; ok "Generated POSTGRES_PASSWORD"; }
   [ -n "$(env_get JWT_SECRET)" ]        || { env_set JWT_SECRET "$(openssl rand -hex 48)"; ok "Generated JWT_SECRET"; }
 
+  OLD_DOMAIN="$(env_get SITE_DOMAIN)"
   env_need SITE_DOMAIN "Domain name (e.g. simlabkenya.co.ke)"
   DOMAIN="$(env_get SITE_DOMAIN)"
-  [ -n "$(env_get SITE_ADDRESS)" ]     || env_set SITE_ADDRESS "$DOMAIN"
-  [ -n "$(env_get ALLOWED_ORIGINS)" ]  || env_set ALLOWED_ORIGINS "https://$DOMAIN,https://www.$DOMAIN"
-  [ -n "$(env_get ADMIN_DASHBOARD_URL)" ] || env_set ADMIN_DASHBOARD_URL "https://$DOMAIN/admin"
+  # Values derived from the domain follow it only if they were still the derived defaults
+  # (or empty); anything you customised by hand is left alone.
+  derive() { # derive KEY old_default new_default
+    local cur; cur="$(env_get "$1")"
+    if [ -z "$cur" ] || { [ -n "$OLD_DOMAIN" ] && [ "$cur" = "$2" ]; }; then
+      [ "$cur" = "$3" ] || env_set "$1" "$3"
+    fi
+  }
+  derive SITE_ADDRESS "$OLD_DOMAIN" "$DOMAIN"
+  derive ALLOWED_ORIGINS "https://$OLD_DOMAIN,https://www.$OLD_DOMAIN" "https://$DOMAIN,https://www.$DOMAIN"
+  derive ADMIN_DASHBOARD_URL "https://$OLD_DOMAIN/admin" "https://$DOMAIN/admin"
 
   env_need GMAIL_USER "Gmail address that sends emails (admin login codes)"
   env_need GMAIL_APP_PASSWORD "Gmail app password" secret
