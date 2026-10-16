@@ -177,8 +177,6 @@ if [ "$VERIFY_ONLY" -eq 0 ]; then
   [ -n "$(env_get ALLOWED_ORIGINS)" ]  || env_set ALLOWED_ORIGINS "https://$DOMAIN,https://www.$DOMAIN"
   [ -n "$(env_get ADMIN_DASHBOARD_URL)" ] || env_set ADMIN_DASHBOARD_URL "https://$DOMAIN/admin"
 
-  env_need VITE_SUPABASE_URL "Supabase URL (shop products/orders)"
-  env_need SUPABASE_SERVICE_ROLE_KEY "Supabase service-role key" secret
   env_need GMAIL_USER "Gmail address that sends emails (admin login codes)"
   env_need GMAIL_APP_PASSWORD "Gmail app password" secret
   [ -n "$(env_get ADMIN_EMAIL)" ] || env_set ADMIN_EMAIL "$(env_get GMAIL_USER)"
@@ -187,7 +185,7 @@ fi
 
 # validate (also runs in --verify-only)
 BAD=0
-for k in SITE_DOMAIN SITE_ADDRESS POSTGRES_PASSWORD JWT_SECRET VITE_SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY GMAIL_USER GMAIL_APP_PASSWORD; do
+for k in SITE_DOMAIN SITE_ADDRESS POSTGRES_PASSWORD JWT_SECRET GMAIL_USER GMAIL_APP_PASSWORD; do
   [ -n "$(env_get "$k")" ] || { printf '  %s✖%s %s is empty\n' "$R" "$N" "$k"; BAD=1; }
 done
 [ "$BAD" -eq 0 ] || die "Fill the empty values in .env and re-run."
@@ -201,7 +199,7 @@ ok ".env validated (permissions 600)"
 
 # ══════════════════════════════════════════════════════════════════════════════
 step "Verify before deploying"
-for f in db/init/001_ocean_shujaa.sql db/init/002_admin_auth.sql deploy/Caddyfile Dockerfile server/Dockerfile server/scripts/create-admin.ts; do
+for f in db/init/001_ocean_shujaa.sql db/init/002_admin_auth.sql db/init/003_shop.sql deploy/Caddyfile Dockerfile server/Dockerfile server/scripts/create-admin.ts; do
   [ -f "$f" ] || die "Missing project file: $f"
 done
 ok "Project files present"
@@ -310,6 +308,7 @@ api_status() { # api_status METHOD PATH EXPECTED_STATUS
 }
 db_scalar() { psql_db -At -c "$1"; }
 registrations_table() { [ "$(db_scalar "SELECT to_regclass('public.ocean_shujaa_registrations') IS NOT NULL")" = t ]; }
+shop_ready() { [ "$(db_scalar "SELECT to_regclass('public.orders') IS NOT NULL AND (SELECT count(*) FROM products) >= 0")" = t ]; }
 has_admin() { [ "$(db_scalar 'SELECT count(*) FROM admin_users')" -ge 1 ]; }
 postgres_private() { ! ss -ltn | grep -q ':5432 '; }
 
@@ -318,6 +317,7 @@ for i in $(seq 1 30); do api_status GET /api/health 200 >/dev/null 2>&1 && break
 
 check "api container answers /api/health"           api_status GET /api/health 200
 check "ocean_shujaa_registrations table exists"     registrations_table
+check "shop tables exist and catalogue is seeded"   shop_ready
 check "an admin account exists"                     has_admin
 check "public registration rejects bad input (400)" api_status POST /api/ocean-shujaa/registrations 400
 check "admin API refuses anonymous requests (401)"  api_status GET /api/ocean-shujaa/admin/registrations 401

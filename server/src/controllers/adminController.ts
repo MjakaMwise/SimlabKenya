@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import supabase from '../config/supabase.js';
 import pool from '../config/postgres.js';
 import { sendOTPEmail } from '../services/emailService.js';
 import { getAbstractsFromFirestore } from '../services/firebaseService.js';
@@ -107,39 +106,22 @@ export const getMe = async (req: Request, res: Response) => {
 };
 
 // GET /api/admin/stats — admin only
-export const getStats = async (req: Request, res: Response) => {
-  const [ordersResult, recentOrdersResult, abstracts] = await Promise.all([
-    supabase.from('orders').select('order_status, payment_status, total_amount'),
-    supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10),
+export const getStats = async (_req: Request, res: Response) => {
+  const [totals, recent, abstracts] = await Promise.all([
+    pool.query(`SELECT
+        count(*)::int AS "totalOrders",
+        count(*) FILTER (WHERE order_status = 'pending')::int AS "pendingOrders",
+        count(*) FILTER (WHERE order_status = 'completed')::int AS "completedOrders",
+        COALESCE(sum(total_amount) FILTER (WHERE payment_status = 'paid'), 0) AS "totalRevenue"
+      FROM orders`),
+    pool.query('SELECT * FROM orders ORDER BY created_at DESC LIMIT 10'),
     getAbstractsFromFirestore().catch(() => [] as { status?: string }[]),
   ]);
 
-  if (ordersResult.error) {
-    return res.status(500).json({ error: ordersResult.error.message });
-  }
-
-  const orders = ordersResult.data || [];
-  const totalOrders = orders.length;
-  const pendingOrders = orders.filter((o) => o.order_status === 'pending').length;
-  const completedOrders = orders.filter((o) => o.order_status === 'completed').length;
-  const totalRevenue = orders
-    .filter((o) => o.payment_status === 'paid')
-    .reduce((sum, o) => sum + (o.total_amount || 0), 0);
-
-  const totalAbstracts = abstracts.length;
-  const pendingAbstracts = abstracts.filter((a) => (a as { status?: string }).status === 'pending').length;
-
   res.json({
-    totalOrders,
-    pendingOrders,
-    completedOrders,
-    totalRevenue,
-    totalAbstracts,
-    pendingAbstracts,
-    recentOrders: recentOrdersResult.data || [],
+    ...totals.rows[0],
+    totalAbstracts: abstracts.length,
+    pendingAbstracts: abstracts.filter((a) => (a as { status?: string }).status === 'pending').length,
+    recentOrders: recent.rows,
   });
 };
