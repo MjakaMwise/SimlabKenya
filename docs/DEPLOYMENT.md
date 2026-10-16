@@ -35,6 +35,20 @@ Admin accounts live in the VPS Postgres (`admin_users`), on the VPS. Signing in 
 docker compose run --rm api npx tsx server/scripts/create-admin.ts
 ```
 
+### Forgot the admin password / lock-out
+
+On the VPS, from the repo folder:
+
+```bash
+./deploy/reset-admin.sh                     # prompts for the new password
+./deploy/reset-admin.sh --email a@b.c --generate   # random password, shown once
+./deploy/reset-admin.sh --list              # list admins
+./deploy/reset-admin.sh --revoke-all        # sign every admin out everywhere
+./deploy/reset-admin.sh --delete a@b.c      # remove an admin (never the last one)
+```
+
+A reset also discards pending login codes and signs that admin out on all devices. Login codes still need Gmail to be working (`GMAIL_USER` / `GMAIL_APP_PASSWORD`).
+
 Existing Supabase admin passwords are **not** migrated; create the account again with the script. Changing `JWT_SECRET` signs every admin out. Supabase is no longer used anywhere: shop products and orders are also in the VPS Postgres (`db/init/003_shop.sql`, seeded with the 5 starter products).
 
 ## 3. Manual path (what the script automates)
