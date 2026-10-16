@@ -16,7 +16,7 @@ The script is safe to re-run; finished steps are skipped. It:
 1. **Preflight** – OS, sudo, disk (≥5 GB), memory.
 2. **Installs what is missing** – git, curl, openssl, ufw, Docker Engine and the compose plugin.
 3. **Firewall** – allows SSH (first, so you are never locked out), 80 and 443 only.
-4. **Configures `.env`** – copies `.env.example`, generates `POSTGRES_PASSWORD` and `JWT_SECRET`, asks for the domain, Supabase and Gmail values, validates them, sets mode 600.
+4. **Configures `.env`** – copies `.env.example` (existing `.env` values are the prompt defaults: Enter keeps them, typing changes them; nothing is overwritten silently), generates missing `POSTGRES_PASSWORD` and `JWT_SECRET`, asks for the domain and Gmail values, validates them, sets mode 600.
 5. **Verifies before deploying** – project files, `docker compose config`, ports 80/443 free, DNS points at this server, then builds the images.
 6. **Deploys** – starts Postgres, applies `db/init/*.sql`, creates the first admin, starts API + web.
 7. **Verifies after deploying** – API health, tables exist, an admin exists, public form validates input, admin routes reject anonymous requests, Postgres not exposed, HTTPS site responds.
@@ -28,14 +28,14 @@ For unattended runs set `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` i
 
 ## 2. Admin login
 
-Admin accounts live in the VPS Postgres (`admin_users`), not in Supabase. Signing in is password → 6-digit code emailed through Gmail → 8-hour session. The code step is enforced by the server.
+Admin accounts live in the VPS Postgres (`admin_users`), on the VPS. Signing in is password → 6-digit code emailed through Gmail → 8-hour session. The code step is enforced by the server.
 
 ```bash
 # create another admin, or reset a password
 docker compose run --rm api npx tsx server/scripts/create-admin.ts
 ```
 
-Existing Supabase admin passwords are **not** migrated; create the account again with the script. Changing `JWT_SECRET` signs every admin out. Shop products and orders are still read from Supabase.
+Existing Supabase admin passwords are **not** migrated; create the account again with the script. Changing `JWT_SECRET` signs every admin out. Supabase is no longer used anywhere: shop products and orders are also in the VPS Postgres (`db/init/003_shop.sql`, seeded with the 5 starter products).
 
 ## 3. Manual path (what the script automates)
 
@@ -49,6 +49,19 @@ docker compose run --rm api npx tsx server/scripts/create-admin.ts
 
 The `db/init/*.sql` files run automatically on an empty database. On an existing database apply them by hand (they are idempotent):
 `docker compose exec -T db psql -U simlab simlab < db/init/002_admin_auth.sql`
+
+## 3b. Bringing over old Supabase data (optional, one-off)
+
+If the old shop has real orders or edited products, export each table from the Supabase dashboard (Table editor → Export as CSV), copy the files to the VPS and load them:
+
+```bash
+docker compose exec -T db psql -U simlab simlab -c "\copy orders FROM STDIN WITH CSV HEADER" < orders.csv
+# products: empty the seeded catalogue first if you are importing your own
+docker compose exec -T db psql -U simlab simlab -c "TRUNCATE products" 
+docker compose exec -T db psql -U simlab simlab -c "\copy products FROM STDIN WITH CSV HEADER" < products.csv
+```
+
+Column names are identical to the old Supabase tables. Admin accounts are not imported; create them with `create-admin.ts`.
 
 ## 4. Updating the site
 
@@ -73,7 +86,7 @@ Copy `backups/` off the server regularly (e.g. `rsync` to another machine).
 | Symptom | Check |
 |---|---|
 | Site not loading over HTTPS | `docker compose logs web` — usually DNS not pointing at the VPS yet |
-| `/api/...` returns 502 | `docker compose logs api` — missing `.env` values (Supabase keys are required at startup) |
+| `/api/...` returns 502 | `docker compose logs api` — missing `.env` values (e.g. `JWT_SECRET` or `GMAIL_*` missing) |
 | API cannot reach DB | `docker compose logs db`; confirm `POSTGRES_PASSWORD` was not changed after the volume was created (the volume keeps the original password) |
 | Firebase errors | `FIREBASE_PRIVATE_KEY` must be on one line with literal `\n` sequences |
 | Admin login says "Failed to send verification code" | Gmail settings: check `GMAIL_USER` / `GMAIL_APP_PASSWORD` and `docker compose logs api` |

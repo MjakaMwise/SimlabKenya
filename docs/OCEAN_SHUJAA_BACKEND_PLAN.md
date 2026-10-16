@@ -24,14 +24,14 @@ Status: **plan written before any code**. Everything below is what will be creat
                 │  existing server/ │  pg    │  volume: pgdata    │
                 └─────────┬─────────┘        └────────────────────┘
                           │ (existing features only)
-                  Supabase auth / orders, Firebase, Cloudinary, SMTP
+                  Firebase, Cloudinary, Gmail SMTP
 ```
 
 Decisions:
 
 - **Reuse the existing Express server** (`server/`) instead of a second service. It already has CORS, validation (zod), error handling and admin auth. We only add one route group.
 - **Postgres is only reachable inside the docker network.** No port is published to the internet.
-- **Admin auth is unchanged.** The admin still signs in with Supabase + email OTP. The new admin endpoints reuse the existing `requireAuth` + `requireAdmin` middleware, so only `simlabkenya@gmail.com` can read or change registrations.
+- **Admin auth is unchanged.** The admin signs in with password + email OTP. The new admin endpoints reuse the existing `requireAuth` + `requireAdmin` middleware, so only `simlabkenya@gmail.com` can read or change registrations.
 - **Existing orders/abstracts keep using Supabase/Firebase.** Migrating those off Supabase is out of scope; this plan only adds the new Postgres-backed feature and moves hosting to the VPS.
 - **Caddy** is used as the web server because it gets and renews Let's Encrypt certificates automatically with a 3-line config.
 
@@ -119,4 +119,16 @@ Decisions:
 
 **`start-setup.sh`** (repo root) installs missing software, configures the firewall and `.env`, verifies the environment, deploys, then verifies the running deployment. See `docs/DEPLOYMENT.md` §1 for the step list.
 
-Not changed: shop products and orders still use Supabase data; Firebase/Cloudinary for abstracts.
+## 7. Addendum — Supabase removed
+
+Everything that was in Supabase now lives in the VPS Postgres. Supabase packages, client, config, keys and the `supabase/` migrations folder are deleted.
+
+| File | Action | What it does |
+|---|---|---|
+| `db/init/003_shop.sql` | create | `products` and `orders` tables (same columns as before), triggers, indexes, and the 5 starter products (only inserted into an empty table). |
+| `server/src/controllers/shopController.ts`, `orderController.ts`, `adminController.ts` (stats) | rewrite | Same API responses, now using `pg` queries. |
+| `server/src/config/postgres.ts` | edit | Returns NUMERIC/COUNT as JSON numbers, as the old API did. |
+| `api/send-otp-email.ts`, `api/verify-otp.ts` | delete | Dead Vercel functions that used Supabase. |
+| `start-setup.sh`, `.env.example`, `docs/DEPLOYMENT.md` | edit | No Supabase prompts or checks; verifies the shop tables. |
+
+Still external: Firebase (abstract submissions), Cloudinary (file uploads), Gmail (email).
