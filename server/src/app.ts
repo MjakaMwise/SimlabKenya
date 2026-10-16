@@ -5,6 +5,9 @@ import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
 
+// Behind Caddy on the VPS: trust the first proxy so req.ip is the real client IP.
+app.set('trust proxy', 1);
+
 // ── CORS ──────────────────────────────────────────────────────────────────────
 const allowedOrigins = [
   'http://localhost:8080',
@@ -12,6 +15,7 @@ const allowedOrigins = [
   'https://simlabkenya.co.ke',
   'https://simlabkenya.co.ke/admin',
   'https://simlab-kenya-41nx-git-main-marshallisraelokoth-2763s-projects.vercel.app',
+  ...(process.env.ALLOWED_ORIGINS?.split(',').map((o) => o.trim()) ?? []),
   process.env.ADMIN_DASHBOARD_URL,
   process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
 ].filter(Boolean) as string[];

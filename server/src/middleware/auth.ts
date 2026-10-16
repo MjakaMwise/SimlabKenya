@@ -1,56 +1,42 @@
 import { Request, Response, NextFunction } from 'express';
-import { createClient } from '@supabase/supabase-js';
+import pool from '../config/postgres.js';
+import { verifyToken, TokenPurpose } from '../services/authService.js';
 
-const ADMIN_EMAILS = ['simlabkenya@gmail.com'];
-
-// Lightweight Supabase client for JWT verification (uses anon key)
-const supabaseAuth = createClient(
-  process.env.VITE_SUPABASE_URL!,
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
-
-export const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid authorization header' });
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  try {
-    const { data: { user }, error } = await supabaseAuth.auth.getUser(token);
-    if (error || !user) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
-    }
-    req.user = { id: user.id, email: user.email || '' };
-    next();
-  } catch {
-    return res.status(401).json({ error: 'Authentication failed' });
-  }
+const bearer = (req: Request): string | null => {
+  const h = req.headers.authorization;
+  return h?.startsWith('Bearer ') ? h.slice(7) : null;
 };
 
-// Tries to authenticate but does not block unauthenticated requests
-export const optionalAuth = async (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) return next();
+const adminExists = async (id: string) =>
+  (await pool.query('SELECT 1 FROM admin_users WHERE id = $1', [id])).rowCount === 1;
 
-  const token = authHeader.split(' ')[1];
-  try {
-    const { data: { user } } = await supabaseAuth.auth.getUser(token);
-    if (user) req.user = { id: user.id, email: user.email || '' };
-  } catch {
-    // Proceed without user if token is invalid
+const authenticate = (purpose: TokenPurpose) => async (req: Request, res: Response, next: NextFunction) => {
+  const token = bearer(req);
+  if (!token) return res.status(401).json({ error: 'Missing or invalid authorization header' });
+  const user = verifyToken(token, purpose);
+  // Re-check the account so deleting an admin revokes their session immediately.
+  if (!user || !(await adminExists(user.id))) {
+    return res.status(401).json({ error: 'Invalid or expired token' });
   }
+  req.user = user;
   next();
 };
 
+// Fully signed-in admin (password + emailed code completed).
+export const requireAuth = authenticate('session');
+// Password accepted, emailed code still outstanding.
+export const requirePending = authenticate('pending');
+
+// Does not block anonymous requests (used so admins see unpublished products).
+export const optionalAuth = async (req: Request, _res: Response, next: NextFunction) => {
+  const token = bearer(req);
+  const user = token && verifyToken(token, 'session');
+  if (user && (await adminExists(user.id))) req.user = user;
+  next();
+};
+
+// Every row in admin_users is an administrator.
 export const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user) {
-    return res.status(401).json({ error: 'Not authenticated' });
-  }
-  if (!ADMIN_EMAILS.includes(req.user.email)) {
-    return res.status(403).json({ error: 'Admin access required' });
-  }
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
   next();
 };

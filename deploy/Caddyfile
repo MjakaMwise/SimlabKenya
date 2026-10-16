@@ -1,0 +1,29 @@
+# SITE_ADDRESS is the domain on the VPS (auto-HTTPS) or ":80" for local testing.
+{$SITE_ADDRESS::80} {
+	encode gzip zstd
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	handle /api/* {
+		reverse_proxy api:5000
+	}
+
+	handle {
+		root * /srv
+		# Hashed build assets can be cached forever; index.html must not be.
+		@assets path /assets/*
+		header @assets Cache-Control "public, max-age=31536000, immutable"
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# Redirect www to the bare domain when running with a real domain.
+www.{$SITE_DOMAIN:localhost.invalid} {
+	redir https://{$SITE_DOMAIN:localhost.invalid}{uri} permanent
+}

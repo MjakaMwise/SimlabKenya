@@ -6,6 +6,7 @@ import {
     ShoppingCart,
     Package,
     FileText,
+    Waves,
     Settings,
     LogOut,
     Menu,
@@ -21,6 +22,7 @@ const navItems = [
     { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
     { label: "Products", href: "/admin/products", icon: Package },
     { label: "Abstracts", href: "/admin/abstracts", icon: FileText },
+    { label: "Ocean Shujaa", href: "/admin/ocean-shujaa", icon: Waves },
     { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

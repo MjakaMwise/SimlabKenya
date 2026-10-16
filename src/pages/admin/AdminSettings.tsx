@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { User, Mail, Key, Bell, Store, Loader2 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,19 +10,20 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 
 const AdminSettings = () => {
-    const { user } = useAdminAuth();
+    const { user, token } = useAdminAuth();
     const { toast } = useToast();
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [passwordData, setPasswordData] = useState({
+        currentPassword: "",
         newPassword: "",
         confirmPassword: "",
     });
 
     const handlePasswordChange = async () => {
-        if (passwordData.newPassword.length < 6) {
+        if (passwordData.newPassword.length < 10) {
             toast({
                 title: "Password too short",
-                description: "Password must be at least 6 characters",
+                description: "Password must be at least 10 characters",
                 variant: "destructive",
             });
             return;
@@ -41,23 +41,28 @@ const AdminSettings = () => {
         setIsChangingPassword(true);
 
         try {
-            const { error } = await supabase.auth.updateUser({
-                password: passwordData.newPassword,
+            const res = await fetch("/api/admin/change-password", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                    currentPassword: passwordData.currentPassword,
+                    newPassword: passwordData.newPassword,
+                }),
             });
-
-            if (error) throw error;
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Failed to update password");
 
             toast({
                 title: "Password updated",
                 description: "Your password has been changed successfully",
             });
 
-            setPasswordData({ newPassword: "", confirmPassword: "" });
+            setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
         } catch (error) {
             console.error("Password change error:", error);
             toast({
                 title: "Error",
-                description: "Failed to update password. Please try again.",
+                description: error instanceof Error ? error.message : "Failed to update password. Please try again.",
                 variant: "destructive",
             });
         } finally {
@@ -120,6 +125,18 @@ const AdminSettings = () => {
                     </h2>
                     <div className="space-y-4">
                         <div className="space-y-2">
+                            <Label htmlFor="currentPassword">Current Password</Label>
+                            <Input
+                                id="currentPassword"
+                                type="password"
+                                value={passwordData.currentPassword}
+                                onChange={(e) =>
+                                    setPasswordData({ ...passwordData, currentPassword: e.target.value })
+                                }
+                                placeholder="••••••••"
+                            />
+                        </div>
+                        <div className="space-y-2">
                             <Label htmlFor="newPassword">New Password</Label>
                             <Input
                                 id="newPassword"
@@ -148,7 +165,7 @@ const AdminSettings = () => {
                         </div>
                         <Button
                             onClick={handlePasswordChange}
-                            disabled={isChangingPassword || !passwordData.newPassword}
+                            disabled={isChangingPassword || !passwordData.newPassword || !passwordData.currentPassword}
                         >
                             {isChangingPassword ? (
                                 <>
