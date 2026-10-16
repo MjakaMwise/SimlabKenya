@@ -11,7 +11,7 @@
 #                      default: Enter keeps them), validate. Existing values are never overwritten silently
 #   5. Pre-deploy checks  compose file, ports, DNS, SQL files, image build
 #   6. Deploy          database -> schema -> first admin -> api + web
-#   7. Post-deploy checks  containers healthy, API, tables, admin, HTTPS site
+#   7. Post-deploy checks  containers healthy, API, tables, admin, Gmail login + test email, HTTPS site
 #   8. Backups         daily Postgres backup cron
 #
 # Options:
@@ -20,13 +20,14 @@
 #   --skip-firewall   do not touch ufw
 #   --skip-dns-check  do not fail/warn when the domain does not point at this server
 #   --skip-cron       do not install the backup cron job
+#   --skip-email-check  do not verify the Gmail login / send the test email
 #   -h, --help        show this help
 set -Eeuo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
 ROOT="$PWD"
 
-VERIFY_ONLY=0; ASSUME_YES=0; SKIP_FW=0; SKIP_DNS=0; SKIP_CRON=0
+VERIFY_ONLY=0; ASSUME_YES=0; SKIP_FW=0; SKIP_DNS=0; SKIP_CRON=0; SKIP_EMAIL=0
 for a in "$@"; do
   case "$a" in
     --verify-only) VERIFY_ONLY=1 ;;
@@ -34,6 +35,7 @@ for a in "$@"; do
     --skip-firewall) SKIP_FW=1 ;;
     --skip-dns-check) SKIP_DNS=1 ;;
     --skip-cron) SKIP_CRON=1 ;;
+    --skip-email-check) SKIP_EMAIL=1 ;;
     -h|--help) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $a (try --help)"; exit 2 ;;
   esac
@@ -340,6 +342,34 @@ check "an admin account exists"                     has_admin
 check "public registration rejects bad input (400)" api_status POST /api/ocean-shujaa/registrations 400
 check "admin API refuses anonymous requests (401)"  api_status GET /api/ocean-shujaa/admin/registrations 401
 check "Postgres is not exposed on the host"         postgres_private
+
+# Email: admin login codes depend on it, so prove it works instead of finding out at first login.
+if [ "$SKIP_EMAIL" -eq 1 ]; then
+  info "Email check skipped (--skip-email-check)"
+else
+  info "Verifying the Gmail login..."
+  if dc exec -T api npx tsx server/scripts/test-email.ts; then
+    ok "Gmail login works"
+    TO="${ADMIN_BOOTSTRAP_EMAIL:-$(env_get ADMIN_BOOTSTRAP_EMAIL)}"; TO="${TO:-$(env_get ADMIN_EMAIL)}"
+    if interactive; then
+      read -r -p "  Send a real test email to [${TO}] (type another address, 'n' to skip): " ANS
+      case "$ANS" in n|N|no) TO="" ;; ?*) TO="$ANS" ;; esac
+    else
+      TO=""   # unattended: login check only, so we never mail someone unexpectedly
+    fi
+    if [ -n "$TO" ]; then
+      if dc exec -T -e TEST_EMAIL_TO="$TO" api npx tsx server/scripts/test-email.ts; then
+        ok "Test email accepted for $TO"
+        interactive && { read -r -p "  Did it arrive (check spam too)? [Y/n] " GOT; case "$GOT" in n|N) FAIL=1; printf '  %s✖%s Email was accepted but did not arrive — check the spam folder and Gmail "Sent" folder.\n' "$R" "$N" ;; esac; }
+      else
+        FAIL=1
+      fi
+    fi
+  else
+    FAIL=1
+    printf '  %s✖%s Admin login codes cannot be sent until this is fixed. Edit GMAIL_USER / GMAIL_APP_PASSWORD in .env, then: docker compose up -d api && ./deploy/test-email.sh\n' "$R" "$N"
+  fi
+fi
 
 info "Checking the public site (HTTPS may take up to a minute while the certificate is issued)..."
 SITE_OK=0

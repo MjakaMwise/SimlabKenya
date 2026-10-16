@@ -1,4 +1,5 @@
 import app from './src/app.js';
+import { verifyEmailTransport, explainEmailError } from './src/services/emailService.js';
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -10,3 +11,8 @@ app.listen(PORT, () => {
   console.log(`  → Admin:     http://localhost:${PORT}/api/admin`);
   console.log(`  → Health:    http://localhost:${PORT}/api/health`);
 });
+
+// Fail loudly in the logs if outgoing email is broken: admin login codes depend on it.
+verifyEmailTransport()
+  .then(() => console.log('[Email] SMTP login verified'))
+  .catch((err) => console.error(`[Email] NOT WORKING — admin login codes and order emails will fail. ${explainEmailError(err)}`));
