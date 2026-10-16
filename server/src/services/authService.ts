@@ -37,11 +37,11 @@ export const signToken = (admin: { id: string; email: string }, purpose: TokenPu
     expiresIn: purpose === 'pending' ? '10m' : '8h',
   });
 
-export const verifyToken = (token: string, purpose: TokenPurpose): { id: string; email: string } | null => {
+export const verifyToken = (token: string, purpose: TokenPurpose): { id: string; email: string; iat: number } | null => {
   try {
     const p = jwt.verify(token, secret!) as jwt.JwtPayload;
     if (p.purpose !== purpose || !p.sub || typeof p.email !== 'string') return null;
-    return { id: p.sub, email: p.email };
+    return { id: p.sub, email: p.email, iat: p.iat ?? 0 };
   } catch {
     return null;
   }

@@ -217,7 +217,7 @@ ok ".env validated (permissions 600)"
 
 # ══════════════════════════════════════════════════════════════════════════════
 step "Verify before deploying"
-for f in db/init/001_ocean_shujaa.sql db/init/002_admin_auth.sql db/init/003_shop.sql deploy/Caddyfile Dockerfile server/Dockerfile server/scripts/create-admin.ts; do
+for f in db/init/001_ocean_shujaa.sql db/init/002_admin_auth.sql db/init/003_shop.sql db/init/004_admin_session_revocation.sql deploy/Caddyfile Dockerfile server/Dockerfile server/scripts/create-admin.ts; do
   [ -f "$f" ] || die "Missing project file: $f"
 done
 ok "Project files present"
