@@ -27,12 +27,25 @@ export const button = (href: string, label: string): string =>
 export const link = (href: string, label: string): string =>
   `<a href="${esc(href)}" style="color:${BRAND};">${esc(label)}</a>`;
 
-export const layout = (heading: string, body: string, opts: { footer?: string } = {}): string => `<!DOCTYPE html>
+const SIMLAB_LOGO = `<img src="${SITE_URL}/email-logo.jpeg" alt="SIM-Lab Kenya" width="52" height="52" style="display:block;border:0;border-radius:50%;">`;
+const OCEAN_LOGO = `<img src="${SITE_URL}/email-logo-ocean-shujaa.png" alt="Ocean Shujaa" width="84" height="56" style="display:block;border:0;">`;
+
+/** Ocean Shujaa mails carry both marks: SIM-Lab on the left, the programme on the right. */
+const logoRow = (brand: 'simlab' | 'oceanShujaa'): string =>
+  brand === 'oceanShujaa'
+    ? `<table role="presentation" style="border-collapse:collapse;margin-bottom:24px;"><tr><td style="vertical-align:middle;">${SIMLAB_LOGO}</td><td style="padding:0 14px;vertical-align:middle;color:#cccccc;font-size:20px;">&times;</td><td style="vertical-align:middle;">${OCEAN_LOGO}</td></tr></table>`
+    : `<div style="margin-bottom:24px;">${SIMLAB_LOGO}</div>`;
+
+export const layout = (
+  heading: string,
+  body: string,
+  opts: { footer?: string; brand?: 'simlab' | 'oceanShujaa' } = {}
+): string => `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:${FONT};">
 <table role="presentation" style="width:100%;border-collapse:collapse;"><tr><td style="padding:24px 12px;">
   <table role="presentation" style="max-width:560px;width:100%;margin:0 auto;background:#ffffff;border:1px solid #e6e6e6;border-collapse:collapse;"><tr><td style="padding:32px;">
-    <img src="${SITE_URL}/email-logo.jpeg" alt="SIM-Lab Kenya" width="44" height="44" style="display:block;border:0;border-radius:50%;margin-bottom:24px;">
+    ${logoRow(opts.brand ?? 'simlab')}
     <h1 style="margin:0 0 20px;font-size:22px;font-weight:600;color:#111111;">${esc(heading)}</h1>
     ${body}
   </td></tr></table>

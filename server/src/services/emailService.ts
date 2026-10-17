@@ -248,6 +248,113 @@ export const sendAbstractStatusEmail = async (data: {
   );
 };
 
+// ── Ocean Shujaa Emails ───────────────────────────────────────────────────────
+
+export interface OceanShujaaRegistrationMail {
+  participantName: string;
+  level: string;
+  institution: string;
+  guardianName: string;
+  guardianEmail: string;
+  guardianPhone: string;
+  groupSize: number;
+  status: string;
+}
+
+const OS_STATUS_LABELS: Record<string, string> = {
+  pending: 'Received',
+  confirmed: 'Confirmed',
+  waitlisted: 'Waitlisted',
+  cancelled: 'Cancelled',
+};
+
+const OS_STATUS_MESSAGES: Record<string, string> = {
+  confirmed: 'Your place is <strong>confirmed</strong>. We will send joining details before the programme starts.',
+  waitlisted: 'The programme is full for now, so you are on the <strong>waitlist</strong>. We will contact you as soon as a place opens.',
+  cancelled: 'This registration has been <strong>cancelled</strong>. If this is a surprise, please get in touch and we will sort it out.',
+  pending: 'Your registration is <strong>pending</strong> while we review it.',
+};
+
+const oceanShujaaDetails = (d: OceanShujaaRegistrationMail, label?: string): string =>
+  rows([
+    ['Participant', esc(d.participantName)],
+    ['Level', esc(d.level.replace(/_/g, ' '))],
+    ['School / group', esc(d.institution)],
+    ...(d.groupSize > 1 ? ([['Group size', String(d.groupSize)]] as [string, string][]) : []),
+    ...(label ? ([['Status', `<strong>${esc(label)}</strong>`]] as [string, string][]) : []),
+  ]);
+
+const oceanShujaaFooter = `<p style="margin:24px 0 0;font-size:14px;color:#444444;">Questions? Reply to this email or call ${esc(SUPPORT_PHONE)}.</p>`;
+
+export const sendOceanShujaaRegistrationEmail = async (d: OceanShujaaRegistrationMail): Promise<void> => {
+  const transporter = createTransporter();
+  const from = `"Ocean Shujaa" <${FROM_ADDRESS}>`;
+
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.guardianEmail)) {
+    await withTimeout(
+      transporter.sendMail({
+        from,
+        to: d.guardianEmail,
+        subject: `We received your Ocean Shujaa registration — ${d.participantName}`,
+        html: layout(
+          'Registration received',
+          p(`Dear ${esc(d.guardianName)},`) +
+            p(`Thank you for registering <strong>${esc(d.participantName)}</strong> for Ocean Shujaa. We will review it and email you once your place is confirmed.`) +
+            oceanShujaaDetails(d) +
+            oceanShujaaFooter,
+          { brand: 'oceanShujaa' }
+        ),
+      }),
+      EMAIL_TIMEOUT_MS
+    );
+  }
+
+  if (ADMIN_EMAIL) {
+    await withTimeout(
+      transporter.sendMail({
+        from,
+        to: ADMIN_EMAIL,
+        subject: `New Ocean Shujaa registration — ${d.participantName}`,
+        html: layout(
+          'New registration',
+          oceanShujaaDetails(d) +
+            h2('Guardian') +
+            rows([
+              ['Name', esc(d.guardianName)],
+              ['Email', link(`mailto:${d.guardianEmail}`, d.guardianEmail)],
+              ['Phone', esc(d.guardianPhone)],
+            ]) +
+            `<p style="margin:24px 0 0;">${button(`${ADMIN_DASHBOARD_URL}/ocean-shujaa`, 'Open registrations')}</p>`,
+          { brand: 'oceanShujaa' }
+        ),
+      }),
+      EMAIL_TIMEOUT_MS
+    );
+  }
+};
+
+export const sendOceanShujaaStatusEmail = async (d: OceanShujaaRegistrationMail): Promise<void> => {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.guardianEmail)) return;
+  const label = OS_STATUS_LABELS[d.status] ?? d.status;
+  const transporter = createTransporter();
+  await withTimeout(
+    transporter.sendMail({
+      from: `"Ocean Shujaa" <${FROM_ADDRESS}>`,
+      to: d.guardianEmail,
+      subject: `Ocean Shujaa registration ${label.toLowerCase()} — ${d.participantName}`,
+      html: layout(
+        'Registration update',
+        p(`Dear ${esc(d.guardianName)},`) +
+          p(OS_STATUS_MESSAGES[d.status] ?? `The status of this registration is now <strong>${esc(label)}</strong>.`) +
+          oceanShujaaDetails(d, label) +
+          oceanShujaaFooter,
+        { brand: 'oceanShujaa' }
+      ),
+    }),
+    EMAIL_TIMEOUT_MS
+  );
+};
+
 // ── OTP Email ─────────────────────────────────────────────────────────────────
 
 export const sendOTPEmail = async (email: string, otp: string): Promise<void> => {
