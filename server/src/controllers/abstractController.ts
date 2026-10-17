@@ -4,6 +4,7 @@ import { createReadStream } from 'fs';
 import { access } from 'fs/promises';
 import { saveUpload, resolveUpload } from '../services/fileStorage.js';
 import * as abstractDb from '../services/abstractService.js';
+import { postEvent } from '../services/chat.js';
 import { sendAbstractEmails, sendAbstractStatusEmail } from '../services/emailService.js';
 import { AbstractSubmission, UploadedAbstractFile } from '../types/index.js';
 
@@ -86,6 +87,9 @@ export const submitAbstract = async (req: Request, res: Response) => {
     console.error('[Abstract] Database save error:', err);
     return res.status(500).json({ error: 'Failed to save submission. Please try again.' });
   }
+
+  postEvent('abstracts', `New abstract: "${submission.projectTitle}" from ${submission.schoolName}`,
+    { type: 'abstract', id: saved.id, label: submission.projectTitle });
 
   // Send email notifications in background
   sendAbstractEmails({

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import pool from '../config/postgres.js';
 import { sendOrderEmails } from '../services/emailService.js';
 import { Order } from '../types/index.js';
+import { postEvent } from '../services/chat.js';
 import { isShopEnabled } from '../services/settings.js';
 
 const orderItemSchema = z.object({
@@ -61,6 +62,9 @@ export const createOrder = async (req: Request, res: Response) => {
          d.delivery_location ?? null, d.delivery_address ?? null, JSON.stringify(d.items), d.total_amount,
          d.additional_notes ?? null]
       );
+      postEvent('orders',
+        `New order ${rows[0].order_number} from ${d.customer_name}: KES ${Number(d.total_amount).toLocaleString('en-KE')}, ${d.delivery_method}`,
+        { type: 'order', id: rows[0].id, label: rows[0].order_number });
       // Send emails in background — don't block the response
       sendOrderEmails(rows[0] as Order).catch((err) =>
         console.error('[Order emails] Failed to send:', err.message)

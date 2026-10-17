@@ -37,6 +37,7 @@ import AdminAbstractDetail from "./pages/admin/AdminAbstractDetail";
 import AdminOceanShujaa from "./pages/admin/AdminOceanShujaa";
 import AdminStaff from "./pages/admin/AdminStaff";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminTeam from "./pages/admin/AdminTeam";
 
 const queryClient = new QueryClient();
 
@@ -134,6 +135,14 @@ const App = () => (
                 element={
                   <ProtectedRoute adminOnly>
                     <AdminStaff />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/team"
+                element={
+                  <ProtectedRoute>
+                    <AdminTeam />
                   </ProtectedRoute>
                 }
               />

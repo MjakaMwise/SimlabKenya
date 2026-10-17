@@ -7,6 +7,7 @@ import {
     Package,
     FileText,
     Waves,
+    MessagesSquare,
     Settings,
     LogOut,
     Menu,
@@ -16,11 +17,14 @@ import {
 } from "lucide-react";
 import { useAdminAuth, Area } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
+import { useTeamUnread } from "@/hooks/useTeamUnread";
+import { useAdminManifest } from "@/lib/pwa";
 import logo from "@/assets/logo.jpeg";
 
 type NavItem = { label: string; href: string; icon: typeof Users; area?: Area; adminOnly?: boolean };
 const navItems: NavItem[] = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
+    { label: "Team", href: "/admin/team", icon: MessagesSquare },
     { label: "Orders", href: "/admin/orders", icon: ShoppingCart, area: "orders" },
     { label: "Products", href: "/admin/products", icon: Package, area: "shop" },
     { label: "Abstracts", href: "/admin/abstracts", icon: FileText, area: "abstracts" },
@@ -39,6 +43,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     const { user, signOut, isFullAdmin, can } = useAdminAuth();
     const visibleNav = navItems.filter((i) => (i.adminOnly ? isFullAdmin : i.area ? can(i.area, "view") : true));
     const location = useLocation();
+    const teamUnread = useTeamUnread();
+    useAdminManifest();
 
     const handleSignOut = async () => {
         await signOut();
@@ -145,6 +151,9 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                             >
                                 <Icon className="w-5 h-5" />
                                 {item.label}
+                                {item.href === "/admin/team" && teamUnread > 0 && (
+                                    <span className="ml-auto min-w-5 h-5 px-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold grid place-items-center" aria-label={`${teamUnread} unread`}>{teamUnread}</span>
+                                )}
                             </Link>
                         );
                     })}
