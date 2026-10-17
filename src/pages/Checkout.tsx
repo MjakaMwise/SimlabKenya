@@ -1,17 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ArrowLeft, Loader2, MapPin, Truck, CheckCircle2 } from "lucide-react";
 import { z } from "zod";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
+import { PageHead } from "@/site/ui";
+import { useSite } from "@/site/SiteContext";
 import { useCart } from "@/hooks/useCart";
-import { useToast } from "@/hooks/use-toast";
 
 const checkoutSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
@@ -29,7 +21,7 @@ type CheckoutFormData = z.infer<typeof checkoutSchema>;
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, getTotal, clearCart } = useCart();
-  const { toast } = useToast();
+  const { toast } = useSite();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof CheckoutFormData, string>>>({});
 
@@ -45,7 +37,6 @@ const Checkout = () => {
   });
 
   useEffect(() => {
-    window.scrollTo(0, 0);
     if (items.length === 0) {
       navigate("/shop");
     }
@@ -68,11 +59,7 @@ const Checkout = () => {
         fieldErrors[path] = err.message;
       });
       setErrors(fieldErrors);
-      toast({
-        title: "Please fix the errors",
-        description: "Some fields need your attention.",
-        variant: "destructive",
-      });
+      toast("Some fields need your attention.");
       return;
     }
 
@@ -125,11 +112,7 @@ const Checkout = () => {
       navigate(`/order-confirmation?order=${order.order_number}`);
     } catch (error) {
       console.error("Order error:", error);
-      toast({
-        title: "Order failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+      toast(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -137,320 +120,114 @@ const Checkout = () => {
 
   if (items.length === 0) return null;
 
+  const err = (k: keyof CheckoutFormData) => errors[k] && <span className="err">{errors[k]}</span>;
+  const pay =
+    formData.deliveryMethod === "pickup"
+      ? "Pay when you collect your order at IOME001 Innovation Hub (cash or M-Pesa)."
+      : formData.deliveryLocation === "mombasa"
+      ? "Pay on delivery. Cash or M-Pesa accepted."
+      : formData.deliveryLocation === "outside"
+      ? "Payment is required before shipping. We'll contact you with M-Pesa or bank details."
+      : "Select a delivery option to see payment details.";
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
-      <main className="flex-1 pt-24">
-        <section className="section-padding">
-          <div className="container-custom max-w-4xl">
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-              <Link to="/" className="hover:text-primary">Home</Link>
-              <span>/</span>
-              <Link to="/shop" className="hover:text-primary">Shop</Link>
-              <span>/</span>
-              <Link to="/cart" className="hover:text-primary">Cart</Link>
-              <span>/</span>
-              <span className="text-foreground">Checkout</span>
+    <>
+      <PageHead title="Checkout" sub="Tell us where to reach you and how you'd like to receive your order." />
+      <section className="sec">
+        <div className="wrap" style={{ maxWidth: 860 }}>
+          <div className="crumbs"><Link to="/">Home</Link>/<Link to="/shop">Shop</Link>/<Link to="/cart">Cart</Link>/<span>Checkout</span></div>
+          <form onSubmit={handleSubmit} noValidate style={{ gap: 24 }}>
+            <div className="sec-card">
+              <h2>Contact Information</h2>
+              <div className="two">
+                <label htmlFor="name">Full Name *
+                  <input type="text" id="name" autoComplete="name" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} placeholder="John Doe" />
+                  {err("name")}
+                </label>
+                <label htmlFor="email">Email Address *
+                  <input type="email" id="email" autoComplete="email" value={formData.email} onChange={(e) => handleInputChange("email", e.target.value)} placeholder="john@example.com" />
+                  {err("email")}
+                </label>
+              </div>
+              <label htmlFor="phone">Phone Number *
+                <input type="tel" id="phone" autoComplete="tel" value={formData.phone} onChange={(e) => handleInputChange("phone", e.target.value)} placeholder="+254 712 345 678" />
+                {err("phone")}
+              </label>
             </div>
 
-            <h1 className="text-3xl md:text-4xl font-heading font-bold text-primary mb-8">
-              Checkout
-            </h1>
-
-            <form onSubmit={handleSubmit} className="space-y-8">
-              {/* Contact Information */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-card p-6 rounded-xl border space-y-4"
-              >
-                <h2 className="text-xl font-heading font-bold">Contact Information</h2>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      placeholder="John Doe"
-                      className={errors.name ? "border-destructive" : ""}
-                    />
-                    {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+            <div className="sec-card">
+              <h2>Delivery Details</h2>
+              <div className="opts">
+                <button type="button" className="opt" aria-pressed={formData.deliveryMethod === "pickup"} onClick={() => handleInputChange("deliveryMethod", "pickup")}>
+                  <b>Pickup at IOME001 Hub</b><small>Free. Pay on collection.</small>
+                </button>
+                <button type="button" className="opt" aria-pressed={formData.deliveryMethod === "delivery"} onClick={() => handleInputChange("deliveryMethod", "delivery")}>
+                  <b>Delivery to my address</b><small>Fee confirmed after contact.</small>
+                </button>
+              </div>
+              {formData.deliveryMethod === "delivery" && (
+                <>
+                  <div className="opts">
+                    <button type="button" className="opt" aria-pressed={formData.deliveryLocation === "mombasa"} onClick={() => handleInputChange("deliveryLocation", "mombasa")}>
+                      <b>Within Mombasa</b><small>Pay on delivery</small>
+                    </button>
+                    <button type="button" className="opt" aria-pressed={formData.deliveryLocation === "outside"} onClick={() => handleInputChange("deliveryLocation", "outside")}>
+                      <b>Outside Mombasa</b><small>Payment before shipping</small>
+                    </button>
                   </div>
+                  {err("deliveryLocation")}
+                  <label htmlFor="address">Delivery Address *
+                    <textarea id="address" rows={3} maxLength={500} value={formData.deliveryAddress} onChange={(e) => handleInputChange("deliveryAddress", e.target.value)} placeholder="Full address including landmarks" style={{ minHeight: 90 }} />
+                    <span className="hint">{formData.deliveryAddress?.length || 0}/500</span>
+                    {err("deliveryAddress")}
+                  </label>
+                </>
+              )}
+            </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange("email", e.target.value)}
-                      placeholder="john@example.com"
-                      className={errors.email ? "border-destructive" : ""}
-                    />
-                    {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+            <div className="sec-card">
+              <h2>Additional Information</h2>
+              <label htmlFor="notes">Special instructions (optional)
+                <textarea id="notes" maxLength={300} value={formData.additionalNotes} onChange={(e) => handleInputChange("additionalNotes", e.target.value)} placeholder="Any special requests for your order" style={{ minHeight: 80 }} />
+                <span className="hint">{formData.additionalNotes?.length || 0}/300</span>
+              </label>
+            </div>
+
+            <div className="sec-card">
+              <h2>Order Summary</h2>
+              <div>
+                {items.map((item) => (
+                  <div key={`${item.id}-${item.size}`} className="crow" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
+                    <div>
+                      <b>{item.name}</b>
+                      <p className="hint">{item.size && `Size: ${item.size} · `}Qty: {item.quantity}</p>
+                    </div>
+                    <b>KES {(item.price * item.quantity).toLocaleString()}</b>
                   </div>
-                </div>
+                ))}
+              </div>
+              <div className="sum" style={{ position: "static", border: 0, padding: 0 }}>
+                <div className="ln"><span>Subtotal</span><span>KES {getTotal().toLocaleString()}</span></div>
+                <div className="ln"><span>Delivery</span><span>Confirmed after contact</span></div>
+                <div className="ln tot"><span>Total</span><span>KES {getTotal().toLocaleString()}</span></div>
+              </div>
+              <p className="note"><b>Payment:</b> {pay}</p>
+            </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => handleInputChange("phone", e.target.value)}
-                    placeholder="+254 712 345 678"
-                    className={errors.phone ? "border-destructive" : ""}
-                  />
-                  {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
-                </div>
-              </motion.div>
+            <label className="chkrow" htmlFor="terms" style={{ display: "flex" }}>
+              <input type="checkbox" id="terms" checked={!!formData.termsAccepted} onChange={(e) => handleInputChange("termsAccepted", e.target.checked)} />
+              <span>I agree to the terms and conditions and privacy policy.</span>
+            </label>
+            {err("termsAccepted")}
 
-              {/* Delivery Details */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-card p-6 rounded-xl border space-y-4"
-              >
-                <h2 className="text-xl font-heading font-bold">Delivery Details</h2>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <button
-                    type="button"
-                    onClick={() => handleInputChange("deliveryMethod", "pickup")}
-                    className={`p-4 rounded-xl border-2 text-left transition-all ${formData.deliveryMethod === "pickup"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <MapPin className="w-6 h-6 text-primary" />
-                      <div>
-                        <p className="font-bold">Pickup at IOME001 Hub</p>
-                        <p className="text-sm text-muted-foreground">Free - Pay on collection</p>
-                      </div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleInputChange("deliveryMethod", "delivery")}
-                    className={`p-4 rounded-xl border-2 text-left transition-all ${formData.deliveryMethod === "delivery"
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                      }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <Truck className="w-6 h-6 text-primary" />
-                      <div>
-                        <p className="font-bold">Delivery to my address</p>
-                        <p className="text-sm text-muted-foreground">Fee determined after contact</p>
-                      </div>
-                    </div>
-                  </button>
-                </div>
-
-                {formData.deliveryMethod === "delivery" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="space-y-4 pt-4 border-t"
-                  >
-                    <div className="space-y-2">
-                      <Label>Location *</Label>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <button
-                          type="button"
-                          onClick={() => handleInputChange("deliveryLocation", "mombasa")}
-                          className={`p-3 rounded-lg border text-left ${formData.deliveryLocation === "mombasa"
-                              ? "border-primary bg-primary/5"
-                              : "border-border"
-                            }`}
-                        >
-                          <p className="font-medium">Within Mombasa</p>
-                          <p className="text-sm text-muted-foreground">Pay on Delivery</p>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleInputChange("deliveryLocation", "outside")}
-                          className={`p-3 rounded-lg border text-left ${formData.deliveryLocation === "outside"
-                              ? "border-primary bg-primary/5"
-                              : "border-border"
-                            }`}
-                        >
-                          <p className="font-medium">Outside Mombasa</p>
-                          <p className="text-sm text-muted-foreground">Payment before shipping</p>
-                        </button>
-                      </div>
-                      {errors.deliveryLocation && (
-                        <p className="text-sm text-destructive">{errors.deliveryLocation}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Delivery Address *</Label>
-                      <Textarea
-                        id="address"
-                        value={formData.deliveryAddress}
-                        onChange={(e) => handleInputChange("deliveryAddress", e.target.value)}
-                        placeholder="Enter your complete delivery address including landmarks..."
-                        rows={3}
-                        maxLength={500}
-                        className={errors.deliveryAddress ? "border-destructive" : ""}
-                      />
-                      <p className="text-xs text-muted-foreground text-right">
-                        {formData.deliveryAddress?.length || 0}/500
-                      </p>
-                      {errors.deliveryAddress && (
-                        <p className="text-sm text-destructive">{errors.deliveryAddress}</p>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </motion.div>
-
-              {/* Additional Notes */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-card p-6 rounded-xl border space-y-4"
-              >
-                <h2 className="text-xl font-heading font-bold">Additional Information</h2>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Special Instructions (Optional)</Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.additionalNotes}
-                    onChange={(e) => handleInputChange("additionalNotes", e.target.value)}
-                    placeholder="Any special requests or notes for your order..."
-                    rows={2}
-                    maxLength={300}
-                  />
-                  <p className="text-xs text-muted-foreground text-right">
-                    {formData.additionalNotes?.length || 0}/300
-                  </p>
-                </div>
-              </motion.div>
-
-              {/* Order Summary */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-card p-6 rounded-xl border space-y-4"
-              >
-                <h2 className="text-xl font-heading font-bold">Order Summary</h2>
-
-                <div className="divide-y">
-                  {items.map((item) => (
-                    <div key={`${item.id}-${item.size}`} className="py-3 flex justify-between">
-                      <div>
-                        <p className="font-medium">{item.name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {item.size && `Size: ${item.size} • `}Qty: {item.quantity}
-                        </p>
-                      </div>
-                      <p className="font-medium">KES {(item.price * item.quantity).toLocaleString()}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="border-t pt-4 space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>KES {getTotal().toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Delivery</span>
-                    <span className="text-sm">TBD - will be confirmed</span>
-                  </div>
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span className="text-accent">KES {getTotal().toLocaleString()}</span>
-                  </div>
-                </div>
-
-                <div className="bg-muted p-4 rounded-lg">
-                  <h3 className="font-medium mb-2">Payment Information</h3>
-                  {formData.deliveryMethod === "pickup" ? (
-                    <p className="text-sm text-muted-foreground">
-                      Pay when you collect your order at IOME001 Innovation Hub (Cash or M-Pesa).
-                    </p>
-                  ) : formData.deliveryLocation === "mombasa" ? (
-                    <p className="text-sm text-muted-foreground">
-                      Pay on delivery - Cash or M-Pesa accepted.
-                    </p>
-                  ) : formData.deliveryLocation === "outside" ? (
-                    <p className="text-sm text-muted-foreground">
-                      Payment required before shipping. We'll contact you with M-Pesa/Bank details.
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">
-                      Select a delivery option to see payment details.
-                    </p>
-                  )}
-                </div>
-              </motion.div>
-
-              {/* Terms & Submit */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="space-y-4"
-              >
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id="terms"
-                    checked={formData.termsAccepted}
-                    onCheckedChange={(checked) => handleInputChange("termsAccepted", !!checked)}
-                    className={errors.termsAccepted ? "border-destructive" : ""}
-                  />
-                  <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-                    I agree to the{" "}
-                    <a href="#" className="text-primary hover:underline">terms and conditions</a>
-                    {" "}and{" "}
-                    <a href="#" className="text-primary hover:underline">privacy policy</a>
-                  </Label>
-                </div>
-                {errors.termsAccepted && (
-                  <p className="text-sm text-destructive">{errors.termsAccepted}</p>
-                )}
-
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <Button variant="outline" asChild className="sm:w-auto">
-                    <Link to="/cart">
-                      <ArrowLeft className="w-4 h-4" /> Back to Cart
-                    </Link>
-                  </Button>
-                  <Button
-                    type="submit"
-                    variant="cta"
-                    size="lg"
-                    className="flex-1"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" /> Placing Order...
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle2 className="w-4 h-4" /> Place Order
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </motion.div>
-            </form>
-          </div>
-        </section>
-      </main>
-      <Footer />
-    </div>
+            <div className="row">
+              <Link className="btn out" to="/cart">Back to cart</Link>
+              <button className="btn go xl" type="submit" disabled={isSubmitting}>{isSubmitting ? "Placing order..." : "Place order"}</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </>
   );
 };
 

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import pool from '../config/postgres.js';
 import { sendOrderEmails } from '../services/emailService.js';
 import { Order } from '../types/index.js';
+import { isShopEnabled } from '../services/settings.js';
 
 const orderItemSchema = z.object({
   id: z.string(),
@@ -42,6 +43,7 @@ const isUuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v);
 
 // POST /api/orders — public
 export const createOrder = async (req: Request, res: Response) => {
+  if (!(await isShopEnabled())) return res.status(403).json({ error: 'The shop is currently closed.' });
   const parsed = createOrderSchema.safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });

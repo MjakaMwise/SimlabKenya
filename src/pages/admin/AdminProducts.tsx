@@ -8,6 +8,8 @@ import {
     Package,
     Check,
     X,
+    ImagePlus,
+    Store,
 } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -16,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
     Dialog,
     DialogContent,
@@ -36,6 +39,7 @@ interface Product {
     stock_quantity: number;
     is_available: boolean;
     image_url: string | null;
+    images: string[];
 }
 
 const defaultProduct: Omit<Product, "id"> = {
@@ -47,7 +51,8 @@ const defaultProduct: Omit<Product, "id"> = {
     available_sizes: null,
     stock_quantity: 100,
     is_available: true,
-    image_url: "/placeholder.svg",
+    image_url: null,
+    images: [],
 };
 
 const AdminProducts = () => {
@@ -59,10 +64,75 @@ const AdminProducts = () => {
     const [formData, setFormData] = useState<Omit<Product, "id">>(defaultProduct);
     const [isSaving, setIsSaving] = useState(false);
     const { toast } = useToast();
+    const [shopEnabled, setShopEnabled] = useState<boolean | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
 
     useEffect(() => {
         if (token) fetchProducts();
     }, [token]);
+
+    useEffect(() => {
+        fetch("/api/settings")
+            .then((r) => r.json())
+            .then((d) => setShopEnabled(!!d.shop_enabled))
+            .catch(() => setShopEnabled(false));
+    }, []);
+
+    const toggleShop = async (next: boolean) => {
+        setShopEnabled(next);
+        try {
+            const res = await fetch("/api/settings", {
+                method: "PATCH",
+                headers: authHeaders(),
+                body: JSON.stringify({ shop_enabled: next }),
+            });
+            if (!res.ok) throw new Error();
+            toast({
+                title: next ? "Shop is ON" : "Shop is OFF",
+                description: next
+                    ? "Visitors can now see products and place orders."
+                    : "The Shop is hidden from the website and orders are blocked.",
+            });
+        } catch {
+            setShopEnabled(!next);
+            toast({ title: "Error", description: "Could not change the shop setting", variant: "destructive" });
+        }
+    };
+
+    // Upload picked pictures to the media store and add them to this product's gallery
+    const handleImageFiles = async (files: FileList | null) => {
+        if (!files?.length) return;
+        setIsUploading(true);
+        try {
+            const body = new FormData();
+            Array.from(files).forEach((f) => body.append("images", f));
+            const res = await fetch("/api/products/upload-image", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+                body,
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Upload failed");
+            setFormData((f) => {
+                const images = [...f.images, ...data.urls].slice(0, 10);
+                return { ...f, images, image_url: f.image_url || images[0] || null };
+            });
+        } catch (error) {
+            toast({
+                title: "Upload failed",
+                description: error instanceof Error ? error.message : "Could not upload the image",
+                variant: "destructive",
+            });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    const removeImage = (url: string) =>
+        setFormData((f) => {
+            const images = f.images.filter((i) => i !== url);
+            return { ...f, images, image_url: f.image_url === url ? images[0] ?? null : f.image_url };
+        });
 
     const authHeaders = () => ({
         "Content-Type": "application/json",
@@ -96,6 +166,7 @@ const AdminProducts = () => {
                 stock_quantity: product.stock_quantity,
                 is_available: product.is_available,
                 image_url: product.image_url,
+                images: product.images ?? [],
             });
         } else {
             setEditingProduct(null);
@@ -322,14 +393,49 @@ const AdminProducts = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label>Image URL</Label>
-                                    <Input
-                                        value={formData.image_url || ""}
-                                        onChange={(e) =>
-                                            setFormData({ ...formData, image_url: e.target.value })
-                                        }
-                                        placeholder="https://..."
-                                    />
+                                    <Label>Product Images</Label>
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">
+                                        {formData.images.map((url) => (
+                                            <div key={url} className="relative aspect-square rounded-lg overflow-hidden border bg-gray-100">
+                                                <img src={url} alt="" className="w-full h-full object-cover" />
+                                                {formData.image_url === url ? (
+                                                    <span className="absolute bottom-1 left-1 text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded">Cover</span>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, image_url: url })}
+                                                        className="absolute bottom-1 left-1 text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded"
+                                                    >
+                                                        Set cover
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeImage(url)}
+                                                    className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1"
+                                                    aria-label="Remove image"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center gap-1 text-xs text-muted-foreground cursor-pointer hover:bg-gray-50">
+                                            {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
+                                            {isUploading ? "Uploading..." : "Add images"}
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                multiple
+                                                className="hidden"
+                                                disabled={isUploading}
+                                                onChange={(e) => {
+                                                    handleImageFiles(e.target.files);
+                                                    e.target.value = "";
+                                                }}
+                                            />
+                                        </label>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">Up to 10 pictures, 8MB each. The cover picture shows in the shop.</p>
                                 </div>
 
                                 <div className="flex items-center gap-4 pt-2">
@@ -374,6 +480,27 @@ const AdminProducts = () => {
                             </div>
                         </DialogContent>
                     </Dialog>
+                </div>
+
+                {/* Shop on/off */}
+                <div className="bg-white rounded-xl shadow-sm border p-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <Store className="w-6 h-6 text-primary" />
+                        <div>
+                            <p className="font-medium">Shop is {shopEnabled ? "ON" : "OFF"}</p>
+                            <p className="text-sm text-muted-foreground">
+                                {shopEnabled
+                                    ? "Visitors can see products and place orders."
+                                    : "The Shop is hidden from the website and orders are blocked."}
+                            </p>
+                        </div>
+                    </div>
+                    <Switch
+                        checked={!!shopEnabled}
+                        disabled={shopEnabled === null}
+                        onCheckedChange={toggleShop}
+                        aria-label="Turn the shop on or off"
+                    />
                 </div>
 
                 {/* Products Grid */}

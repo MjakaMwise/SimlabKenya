@@ -9,6 +9,8 @@ import { SiteContext } from "./SiteContext";
 import { ProgramPopup, PopReq } from "./ProgramPopup";
 import RegisterModal from "./RegisterModal";
 import LoadingScreen from "./LoadingScreen";
+import { useShopEnabled } from "@/hooks/useShopEnabled";
+import { useCart } from "@/hooks/useCart";
 
 const HOME_TITLE = "SIM-Lab Kenya | Science in Motion - STEM Education & Innovation Lab";
 
@@ -40,6 +42,12 @@ function addFades(main: HTMLElement, foot: HTMLElement | null) {
 
 export default function SiteLayout() {
   const { pathname, hash } = useLocation();
+  const shopEnabled = useShopEnabled();
+  const cartCount = useCart().getItemCount();
+  const nav = useMemo<[string, string, number?][]>(() => {
+    const extra: [string, string][] = [["/abstract", "Abstracts"], ...(shopEnabled ? [["/shop", "Shop"] as [string, string]] : [])];
+    return [...NAV.slice(0, 5), ...extra, ...NAV.slice(5)];
+  }, [shopEnabled]);
   const [theme, setTheme] = useState<string | undefined>();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pop, setPop] = useState<PopReq | null>(null);
@@ -72,9 +80,9 @@ export default function SiteLayout() {
 
   // page title
   useEffect(() => {
-    const item = NAV.find((n) => n[0] === pathname);
+    const item = nav.find((n) => n[0] === pathname);
     document.title = pathname === "/" || !item ? HOME_TITLE : `${item[1]} | SIM-Lab Kenya`;
-  }, [pathname]);
+  }, [pathname, nav]);
 
   // scroll to a section (#prog3, #ph ...) or to the top on navigation; close menu and pop-up
   useEffect(() => {
@@ -111,7 +119,7 @@ export default function SiteLayout() {
                 <span><b>SIM-Lab</b><small>SCIENCE IN MOTION</small></span>
               </Link>
               <div className="links">
-                {NAV.map(([k, l, f]) => (
+                {nav.map(([k, l, f]) => (
                   <Link key={k} to={k} className={`${f === 2 ? "hhl " : ""}${k === pathname ? "on" : ""}`}>
                     {l}
                     {f === 1 && <span className="dot" title="Interactive" />}
@@ -120,13 +128,19 @@ export default function SiteLayout() {
                 ))}
               </div>
               <div className="tools">
+                {shopEnabled && (
+                  <Link className="ib cartlink" to="/cart" aria-label={`Cart, ${cartCount} items`}>
+                    <Icon name="tag" />
+                    {cartCount > 0 && <span className="n">{cartCount}</span>}
+                  </Link>
+                )}
                 <RegisterBtn />
                 <button className="ib" onClick={toggleTheme} aria-label="Toggle dark mode"><Icon name="moon" /></button>
                 <button className="ib" id="burger" onClick={() => setMenuOpen((o) => !o)} aria-label="Open menu" aria-expanded={menuOpen}><Icon name="menu" /></button>
               </div>
             </nav>
             <div id="mobile" className={menuOpen ? "open" : ""}>
-              {NAV.map(([k, l, f]) => (
+              {nav.map(([k, l, f]) => (
                 <Link key={k} to={k} className={k === pathname ? "on" : ""}>
                   {l}
                   {f === 2 && <span className="new">NEW</span>}
@@ -160,7 +174,7 @@ export default function SiteLayout() {
               </div>
               <div>
                 <h4>Quick Links</h4>
-                {NAV.slice(1).map(([k, l]) => <Link key={k} to={k}>{l === "About" ? "About Us" : l}</Link>)}
+                {nav.slice(1).map(([k, l]) => <Link key={k} to={k}>{l === "About" ? "About Us" : l}</Link>)}
               </div>
               <div>
                 <h4>Connect With Us</h4>

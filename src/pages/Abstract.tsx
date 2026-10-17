@@ -1,15 +1,6 @@
-import { motion } from "framer-motion";
 import { useState } from "react";
-import { Upload, FileText, CheckCircle2, XCircle, X, Plus, Trash2 } from "lucide-react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
-import PageHero from "@/components/PageHero";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import { Card } from "@/components/ui/card";
+import { PageHead, SectionHead, CheckList } from "@/site/ui";
+import { useSite } from "@/site/SiteContext";
 
 const ALLOWED_FILE_TYPES = [
   "application/pdf",
@@ -35,7 +26,9 @@ const PROJECT_CATEGORIES = [
 ];
 
 const Abstract = () => {
-  const { toast } = useToast();
+  const { toast: say } = useSite();
+  const toast = ({ title, description }: { title: string; description?: string; variant?: string }) =>
+    say(description ? `${title}: ${description}` : title);
   const [formData, setFormData] = useState({
     schoolName: "",
     teacherName: "",
@@ -50,12 +43,8 @@ const Abstract = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionStatus, setSubmissionStatus] = useState<"success" | "error" | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
-
-  const handleCategoryChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, projectCategory: value }));
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -212,356 +201,102 @@ const Abstract = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
-      <Navbar />
-      <PageHero
-        title="Science Fair Abstract Submission"
-        description="Submit your science fair project abstract and showcase your innovation"
-      />
+    <>
+      <PageHead title="Abstract Submission" sub="Submit your science fair project abstract and showcase your innovation." />
 
-      <main className="flex-grow container-custom py-12">
-        <div className="max-w-4xl mx-auto">
-          {/* Info Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            viewport={{ once: true }}
-            className="mb-12"
-          >
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 p-8">
-              <div className="flex gap-4">
-                <FileText className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-3">
-                    Submit Your Abstract
-                  </h2>
-                  <p className="text-gray-700 leading-relaxed">
-                    We invite students and innovators to share their groundbreaking
-                    projects. Please provide detailed information about your project and
-                    upload your abstract in PDF or Word format. Our team will review your
-                    submission and get back to you with results.
-                  </p>
+      <section className="sec">
+        <div className="wrap cols">
+          <div>
+            <SectionHead title="Submit Your Abstract" lede="We invite students and innovators to share their projects. Give us the details, attach your abstract, and our team will review it and get back to you." />
+            <form onSubmit={handleSubmit} noValidate style={{ marginTop: 28 }}>
+              <label htmlFor="schoolName">Name of School *
+                <input type="text" id="schoolName" name="schoolName" value={formData.schoolName} onChange={handleChange} placeholder="Enter your school name" />
+              </label>
+
+              <div style={{ display: "grid", gap: 8 }}>
+                <div className="stu" style={{ justifyContent: "space-between" }}>
+                  <span className="mono">Student name(s) *</span>
+                  <button type="button" className="btn out" style={{ minHeight: 36, padding: "0 14px", fontSize: ".85rem" }} onClick={() => setStudentNames((p) => [...p, ""])}>+ Add student</button>
                 </div>
+                {studentNames.map((name, idx) => (
+                  <div key={idx} className="stu">
+                    <input type="text" aria-label={`Student ${idx + 1} name`} value={name} placeholder={idx === 0 ? "Enter student name" : `Student ${idx + 1} name`}
+                      onChange={(e) => setStudentNames((p) => p.map((v, i) => (i === idx ? e.target.value : v)))} />
+                    {studentNames.length > 1 && (
+                      <button type="button" className="linkbtn" aria-label="Remove student" onClick={() => setStudentNames((p) => p.filter((_, i) => i !== idx))}>Remove</button>
+                    )}
+                  </div>
+                ))}
               </div>
-            </Card>
-          </motion.div>
 
-          {/* Form Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            viewport={{ once: true }}
-          >
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  Name of School *
+              <div className="two">
+                <label htmlFor="teacherName">Teacher or Patron *
+                  <input type="text" id="teacherName" name="teacherName" value={formData.teacherName} onChange={handleChange} placeholder="Full name" />
                 </label>
-                <Input
-                  name="schoolName"
-                  value={formData.schoolName}
-                  onChange={handleChange}
-                  placeholder="Enter your school name"
-                  required
-                />
-              </div>
-
-              {/* Dynamic student names */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label className="block text-sm font-semibold text-gray-900">
-                    Student Name(s) *
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => setStudentNames((prev) => [...prev, ""])}
-                    className="inline-flex items-center gap-1 text-xs text-primary font-medium hover:underline"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Student
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {studentNames.map((name, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <Input
-                        value={name}
-                        onChange={(e) =>
-                          setStudentNames((prev) =>
-                            prev.map((v, i) => (i === idx ? e.target.value : v))
-                          )
-                        }
-                        placeholder={idx === 0 ? "Enter student name" : `Student ${idx + 1} name`}
-                        required={idx === 0}
-                      />
-                      {studentNames.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setStudentNames((prev) => prev.filter((_, i) => i !== idx))
-                          }
-                          className="shrink-0 text-gray-400 hover:text-red-500 transition-colors"
-                          aria-label="Remove student"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-900">
-                    Name of Teacher or Patron *
-                  </label>
-                  <Input
-                    name="teacherName"
-                    value={formData.teacherName}
-                    onChange={handleChange}
-                    placeholder="Enter teacher or patron name"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-900">
-                    Teacher/Patron Email Address *
-                  </label>
-                  <Input
-                    name="teacherEmail"
-                    value={formData.teacherEmail}
-                    onChange={handleChange}
-                    placeholder="teacher@school.ac.ke"
-                    type="email"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  Teacher/Patron Phone Number *
+                <label htmlFor="teacherEmail">Teacher/Patron Email *
+                  <input type="email" id="teacherEmail" name="teacherEmail" value={formData.teacherEmail} onChange={handleChange} placeholder="teacher@school.ac.ke" />
                 </label>
-                <Input
-                  name="teacherContact"
-                  value={formData.teacherContact}
-                  onChange={handleChange}
-                  placeholder="+254 7XX XXX XXX"
-                  type="tel"
-                  required
-                />
               </div>
+              <label htmlFor="teacherContact">Teacher/Patron Phone *
+                <input type="tel" id="teacherContact" name="teacherContact" value={formData.teacherContact} onChange={handleChange} placeholder="+254 7XX XXX XXX" />
+              </label>
+              <label htmlFor="projectTitle">Title of Project *
+                <input type="text" id="projectTitle" name="projectTitle" value={formData.projectTitle} onChange={handleChange} placeholder="Enter your project title" />
+              </label>
+              <label htmlFor="projectCategory">Project Category *
+                <select id="projectCategory" name="projectCategory" value={formData.projectCategory} onChange={handleChange}>
+                  <option value="">Select a category</option>
+                  {PROJECT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </label>
+              <label htmlFor="projectDescription">Brief Description of Project *
+                <textarea id="projectDescription" name="projectDescription" maxLength={500} rows={4} value={formData.projectDescription} onChange={handleChange} placeholder="A brief description of your project (max 500 characters)" />
+                <span className="hint">{formData.projectDescription.length}/500 characters</span>
+              </label>
 
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  Title of Project *
+              <div style={{ display: "grid", gap: 10 }}>
+                <label className="drop" htmlFor="abstract-file">
+                  <b>Click to upload your abstract *</b>
+                  <small>PDF, Word, Excel or text. Up to 5MB each, multiple files allowed.</small>
+                  <input type="file" id="abstract-file" accept=".pdf,.doc,.docx,.xls,.xlsx,.odt,.txt" multiple onChange={handleFileChange} />
                 </label>
-                <Input
-                  name="projectTitle"
-                  value={formData.projectTitle}
-                  onChange={handleChange}
-                  placeholder="Enter your project title"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  Project Category *
-                </label>
-                <Select value={formData.projectCategory} onValueChange={handleCategoryChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PROJECT_CATEGORIES.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  Brief Description of Project *
-                </label>
-                <Textarea
-                  name="projectDescription"
-                  value={formData.projectDescription}
-                  onChange={handleChange}
-                  placeholder="Provide a brief description of your project (max 500 characters)"
-                  maxLength={500}
-                  rows={4}
-                  required
-                />
-                <p className="text-xs text-gray-500">
-                  {formData.projectDescription.length}/500 characters
-                </p>
-              </div>
-
-              {/* Abstract Upload */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-gray-900">
-                  Abstract Upload (PDF or Word) *
-                </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.odt,.txt"
-                    multiple
-                    onChange={handleFileChange}
-                    className="hidden"
-                    id="abstract-file"
-                  />
-                  <label htmlFor="abstract-file" className="cursor-pointer block">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary hover:bg-primary/5 transition-colors">
-                      <Upload className="w-10 h-10 mx-auto text-gray-400 mb-3" />
-                      <p className="text-sm font-medium text-gray-900 mb-1">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        PDF, Word (.doc, .docx), Excel, or text — up to 5MB each, multiple files allowed
-                      </p>
-                    </div>
-                  </label>
-                </div>
-
                 {abstractFiles.length > 0 && (
-                  <ul className="mt-3 space-y-2">
+                  <ul className="flist">
                     {abstractFiles.map((file, i) => (
-                      <li
-                        key={file.name}
-                        className="flex items-center justify-between gap-3 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
-                      >
-                        <span className="flex items-center gap-2 truncate">
-                          <FileText className="w-4 h-4 text-primary shrink-0" />
-                          <span className="truncate text-gray-800">{file.name}</span>
-                          <span className="text-gray-400 shrink-0">
-                            ({(file.size / 1024).toFixed(0)} KB)
-                          </span>
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => removeFile(i)}
-                          className="shrink-0 text-gray-400 hover:text-red-500 transition-colors"
-                          aria-label={`Remove ${file.name}`}
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
+                      <li key={file.name}>
+                        <span>{file.name} <small>({(file.size / 1024).toFixed(0)} KB)</small></span>
+                        <button type="button" className="linkbtn" aria-label={`Remove ${file.name}`} onClick={() => removeFile(i)}>Remove</button>
                       </li>
                     ))}
                   </ul>
                 )}
               </div>
 
-              <div className="pt-6">
-                <Button
-                  type="submit"
-                  variant="cta"
-                  size="lg"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Submitting..." : "Submit Abstract"}
-                </Button>
-              </div>
+              <div><button className="btn go xl" type="submit" disabled={isSubmitting}>{isSubmitting ? "Submitting..." : "Submit abstract"}</button></div>
 
               {submissionStatus === "success" && (
-                <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-green-800">Submission Successful!</p>
-                    <p className="text-sm text-green-700 mt-0.5">
-                      Your abstract has been received. We will review it and get back to you soon.
-                    </p>
-                  </div>
-                </div>
+                <div className="alert ok" role="status"><div><b>Submission successful!</b>Your abstract has been received. A confirmation email is on its way.</div></div>
               )}
-
               {submissionStatus === "error" && (
-                <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <XCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="font-semibold text-red-800">Submission Failed</p>
-                    <p className="text-sm text-red-700 mt-0.5">
-                      Something went wrong. Please check your connection and try again.
-                    </p>
-                  </div>
-                </div>
+                <div className="alert bad" role="alert"><div><b>Submission failed</b>Something went wrong. Please check your connection and try again.</div></div>
               )}
-
-              <p className="text-xs text-gray-500 text-center">* All fields are required</p>
+              <p className="hint">* All fields are required.</p>
             </form>
-          </motion.div>
+          </div>
 
-          {/* Guidelines Section */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            viewport={{ once: true }}
-            className="mt-16 pt-12 border-t border-gray-200"
-          >
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Submission Guidelines</h2>
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="p-6 border border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-3">What to Include</h3>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  <li className="flex gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    Project objective and goals
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    Methodology and approach
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    Key findings or results
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    Impact and significance
-                  </li>
-                </ul>
-              </Card>
-
-              <Card className="p-6 border border-gray-200">
-                <h3 className="font-semibold text-gray-900 mb-3">Requirements</h3>
-                <ul className="space-y-2 text-sm text-gray-700">
-                  <li className="flex gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    PDF, Word (.doc, .docx), Excel, or text format
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    Maximum 5MB per file
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    Multiple files allowed
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    200-300 words recommended
-                  </li>
-                  <li className="flex gap-2">
-                    <span className="text-primary font-bold">•</span>
-                    Clear and concise language
-                  </li>
-                </ul>
-              </Card>
+          <div style={{ display: "grid", gap: 22 }}>
+            <div className="card">
+              <h3 style={{ color: "var(--head)", marginBottom: 12 }}>What to include</h3>
+              <CheckList items={["Project objective and goals", "Methodology and approach", "Key findings or results", "Impact and significance"]} />
             </div>
-          </motion.div>
+            <div className="card">
+              <h3 style={{ color: "var(--head)", marginBottom: 12 }}>Requirements</h3>
+              <CheckList items={["PDF, Word, Excel or text format", "Maximum 5MB per file", "Multiple files allowed", "200 to 300 words recommended", "Clear and concise language"]} />
+            </div>
+          </div>
         </div>
-      </main>
-
-      <Footer />
-    </div>
+      </section>
+    </>
   );
 };
 
