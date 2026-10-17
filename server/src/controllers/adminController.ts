@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import pool from '../config/postgres.js';
-import { sendOTPEmail } from '../services/emailService.js';
+import { sendOTPEmail, sendTestEmail, verifyEmailTransport, explainEmailError } from '../services/emailService.js';
 import { getAbstractsFromFirestore } from '../services/firebaseService.js';
 import {
   hashPassword, verifyPassword, generateOtp, hashOtp, signToken,
@@ -98,6 +98,18 @@ export const changePassword = async (req: Request, res: Response) => {
   await pool.query('UPDATE admin_users SET password_hash = $1, updated_at = now() WHERE id = $2',
     [hashPassword(parsed.data.newPassword), req.user!.id]);
   res.json({ success: true });
+};
+
+// POST /api/admin/test-email — admin only. Verifies the SMTP login, then sends a real message to the admin.
+export const testEmail = async (req: Request, res: Response) => {
+  try {
+    await verifyEmailTransport();
+    const messageId = await sendTestEmail(req.user!.email);
+    res.json({ success: true, sentTo: req.user!.email, messageId });
+  } catch (err) {
+    console.error('[Email test] failed:', err);
+    res.status(502).json({ error: explainEmailError(err) });
+  }
 };
 
 // GET /api/admin/me — admin only
