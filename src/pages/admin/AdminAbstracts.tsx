@@ -225,7 +225,22 @@ const AdminAbstracts = () => {
                             <p className="text-muted-foreground">No submissions found</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <>
+                        <ul className="md:hidden divide-y">
+                            {paginated.map((abstract) => (
+                                <li key={abstract.id}>
+                                    <Link to={`/admin/abstracts/${abstract.id}`} className="block p-4 space-y-1.5 active:bg-gray-50">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <p className="font-medium text-sm">{abstract.projectTitle}</p>
+                                            <span className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${statusColors[abstract.status] || "bg-gray-100 text-gray-800"}`}>{abstract.status}</span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">{abstract.schoolName} · {abstract.projectCategory}</p>
+                                        <p className="text-xs text-muted-foreground flex items-center gap-1"><FileText className="w-3.5 h-3.5" />{abstract.files?.length ?? 0} files{abstract.submittedAt ? ` · ${formatDate(abstract.submittedAt)}` : ""}</p>
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="hidden md:block overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-gray-50 text-left">
                                     <tr>
@@ -281,6 +296,7 @@ const AdminAbstracts = () => {
                                 </tbody>
                             </table>
                         </div>
+                        </>
                     )}
 
                     {/* Pagination */}

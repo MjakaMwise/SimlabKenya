@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Bell, BellOff, CheckCircle2, Circle, Download, Hash, ListTodo, Lock, Send, UserPlus } from "lucide-react";
+import { Bell, BellOff, CheckCircle2, ChevronDown, Circle, Download, Hash, ListTodo, Lock, Send, UserPlus } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ const AdminTeam = () => {
     const [picked, setPicked] = useState<Member[]>([]);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState("");
+    const [sideOpen, setSideOpen] = useState(false);
     const [taskFor, setTaskFor] = useState<{ title: string; messageId: string | null } | null>(null);
     const [mention, setMention] = useState<{ q: string; start: number } | null>(null);
     const feedRef = useRef<HTMLDivElement>(null);
@@ -134,7 +136,8 @@ const AdminTeam = () => {
         if (el && stick.current) el.scrollTop = el.scrollHeight;
     }, [messages, tab]);
 
-    const go = (id: string, nextTab?: string) => setParams(nextTab === "tasks" ? { channel: id, tab: "tasks" } : { channel: id });
+    const go = (id: string, nextTab?: string) => { setSideOpen(false); setParams(nextTab === "tasks" ? { channel: id, tab: "tasks" } : { channel: id }); };
+    const otherUnread = channels.filter((c) => c.id !== channelId).reduce((n, c) => n + c.unread, 0);
 
     // @mention suggestions: watch for "@word" right before the cursor.
     const onType = (value: string, cursor: number | null) => {
@@ -210,7 +213,7 @@ const AdminTeam = () => {
     return (
         <AdminLayout>
             <div className="max-w-6xl mx-auto">
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div className="hidden lg:flex flex-wrap items-center justify-between gap-3 mb-4">
                     <div>
                         <h1 className="text-2xl font-heading font-bold">Team Desk</h1>
                         <p className="text-sm text-muted-foreground">Chat, mention and hand out tasks. New orders, registrations and abstracts appear here too.</p>
@@ -221,12 +224,14 @@ const AdminTeam = () => {
                         {push.state === "on" && <Button variant="outline" size="sm" onClick={push.disable}><BellOff className="w-4 h-4" /> Notifications on</Button>}
                     </div>
                 </div>
+                <div className="hidden lg:block">
                 {push.state === "blocked" && <p className="mb-3 text-sm rounded-lg bg-amber-50 border border-amber-200 p-3">Notifications are blocked for this site. Allow them in your browser's site settings to get alerts.</p>}
                 {push.state === "unconfigured" && <p className="mb-3 text-sm rounded-lg bg-gray-100 border p-3">Push alerts are not set up on the server yet. Ask the administrator to add the VAPID keys.</p>}
                 {push.error && <p className="mb-3 text-sm text-destructive">{push.error}</p>}
 
-                <div className="grid lg:grid-cols-[220px_minmax(0,1fr)] bg-white border rounded-xl overflow-hidden h-[calc(100vh-190px)] min-h-[480px]">
-                    <nav aria-label="Channels" className="border-b lg:border-b-0 lg:border-r bg-gray-50 p-2 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-y-auto">
+                </div>
+                <div className="grid lg:grid-cols-[220px_minmax(0,1fr)] bg-white lg:border lg:rounded-xl overflow-hidden -mx-4 -mt-4 -mb-4 lg:m-0 h-[calc(100dvh-8.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] lg:h-[calc(100vh-190px)] lg:min-h-[480px]">
+                    <nav aria-label="Channels" className="hidden lg:flex lg:border-r bg-gray-50 p-2 flex-col gap-1 overflow-y-auto">
                         {channels.map((c) => (
                             <button
                                 key={c.id}
@@ -244,18 +249,24 @@ const AdminTeam = () => {
                     </nav>
 
                     <section className="flex flex-col min-w-0 min-h-0">
-                        <header className="flex flex-wrap items-center gap-3 px-4 py-3 border-b">
-                            <div className="min-w-0 flex-1">
+                        <header className="flex items-center gap-2 px-3 lg:px-4 py-2.5 lg:py-3 border-b">
+                            <button onClick={() => setSideOpen(true)} className="lg:hidden relative flex items-center gap-1.5 min-w-0 flex-1 text-left rounded-lg px-2 py-1.5 hover:bg-gray-100" aria-label="Open channels">
+                                {current?.restricted ? <Lock className="w-4 h-4 shrink-0" /> : <Hash className="w-4 h-4 shrink-0" />}
+                                <span className="font-heading font-bold truncate">{current?.name ?? channelId}</span>
+                                <ChevronDown className="w-4 h-4 shrink-0 text-muted-foreground" />
+                                {otherUnread > 0 && <span className="ml-1 min-w-5 h-5 px-1.5 rounded-full bg-amber-400 text-black text-[11px] font-bold grid place-items-center">{otherUnread}</span>}
+                            </button>
+                            <div className="hidden lg:block min-w-0 flex-1">
                                 <h2 className="font-heading font-bold truncate"># {current?.name ?? channelId}</h2>
                                 <p className="text-xs text-muted-foreground truncate">{current?.description}</p>
                             </div>
-                            <div className="flex rounded-lg border overflow-hidden text-sm" role="tablist">
+                            <div className="flex rounded-lg border overflow-hidden text-sm shrink-0" role="tablist">
                                 <button role="tab" aria-selected={tab === "chat"} onClick={() => go(channelId)} className={`px-3 py-1.5 ${tab === "chat" ? "bg-primary text-primary-foreground" : "hover:bg-gray-100"}`}>Chat</button>
                                 <button role="tab" aria-selected={tab === "tasks"} onClick={() => go(channelId, "tasks")} className={`px-3 py-1.5 flex items-center gap-1.5 ${tab === "tasks" ? "bg-primary text-primary-foreground" : "hover:bg-gray-100"}`}>
-                                    <ListTodo className="w-4 h-4" /> Tasks{tasks.filter((t) => t.status === "open").length > 0 && ` (${tasks.filter((t) => t.status === "open").length})`}
+                                    <ListTodo className="w-4 h-4" /><span className="hidden sm:inline">Tasks</span>{tasks.filter((t) => t.status === "open").length > 0 && <span>({tasks.filter((t) => t.status === "open").length})</span>}
                                 </button>
                             </div>
-                            <Button size="sm" variant="outline" onClick={() => setTaskFor({ title: "", messageId: null })}><UserPlus className="w-4 h-4" /> Assign task</Button>
+                            <Button size="sm" variant="outline" className="shrink-0" onClick={() => setTaskFor({ title: "", messageId: null })} aria-label="Assign task"><UserPlus className="w-4 h-4" /><span className="hidden sm:inline">Assign task</span></Button>
                         </header>
 
                         {tab === "chat" ? (
@@ -334,6 +345,32 @@ const AdminTeam = () => {
                     </section>
                 </div>
             </div>
+
+            <Sheet open={sideOpen} onOpenChange={setSideOpen}>
+                <SheetContent side="left" className="w-[85vw] max-w-sm p-0 flex flex-col pt-[env(safe-area-inset-top)]">
+                    <SheetHeader className="p-4 border-b text-left">
+                        <SheetTitle className="font-heading">Team Desk</SheetTitle>
+                        <SheetDescription>{openTasks > 0 ? `You have ${openTasks} open ${openTasks === 1 ? "task" : "tasks"}.` : "Pick a channel."}</SheetDescription>
+                    </SheetHeader>
+                    <nav aria-label="Channels" className="flex-1 overflow-y-auto p-2 space-y-1">
+                        {channels.map((c) => (
+                            <button key={c.id} onClick={() => go(c.id)} aria-current={c.id === channelId} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left ${c.id === channelId ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-gray-100"}`}>
+                                {c.restricted ? <Lock className="w-4 h-4 shrink-0" /> : <Hash className="w-4 h-4 shrink-0" />}
+                                <span className="flex-1 min-w-0"><span className="block truncate">{c.name}</span><span className={`block text-xs truncate ${c.id === channelId ? "text-primary-foreground/80" : "text-muted-foreground"}`}>{c.description}</span></span>
+                                {c.unread > 0 && c.id !== channelId && <span className={`min-w-5 h-5 px-1.5 rounded-full text-[11px] font-bold grid place-items-center ${c.mentions ? "bg-amber-400 text-black" : "bg-primary/80 text-white"}`}>{c.unread}</span>}
+                            </button>
+                        ))}
+                    </nav>
+                    <div className="border-t p-3 space-y-2 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+                        {push.state === "off" && <Button className="w-full" onClick={push.enable}><Bell className="w-4 h-4" /> Turn on notifications</Button>}
+                        {push.state === "on" && <Button variant="outline" className="w-full" onClick={push.disable}><BellOff className="w-4 h-4" /> Notifications on</Button>}
+                        {canInstall && <Button variant="outline" className="w-full" onClick={install}><Download className="w-4 h-4" /> Install app</Button>}
+                        {push.state === "blocked" && <p className="text-xs rounded-lg bg-amber-50 border border-amber-200 p-2">Notifications are blocked for this site. Allow them in your browser's site settings.</p>}
+                        {push.state === "unconfigured" && <p className="text-xs rounded-lg bg-gray-100 border p-2">Push alerts are not set up on the server yet.</p>}
+                        {push.error && <p className="text-xs text-destructive">{push.error}</p>}
+                    </div>
+                </SheetContent>
+            </Sheet>
 
             {taskFor && <TaskDialog members={members} initial={taskFor.title} messageId={taskFor.messageId} meId={user?.id} onClose={() => setTaskFor(null)} onSave={saveTask} />}
         </AdminLayout>

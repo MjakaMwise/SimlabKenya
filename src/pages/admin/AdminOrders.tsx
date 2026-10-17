@@ -308,7 +308,33 @@ const AdminOrders = () => {
                             <p className="text-muted-foreground">No orders found</p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
+                        <>
+                        <ul className="md:hidden divide-y">
+                            {paginatedOrders.map((order) => (
+                                <li key={order.id} className="p-4 space-y-2">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <Link to={`/admin/orders/${order.id}`} className="font-mono text-sm font-semibold text-primary">{order.order_number}</Link>
+                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[order.order_status]}`}>{order.order_status}</span>
+                                    </div>
+                                    <div className="flex items-end justify-between gap-3">
+                                        <div className="min-w-0">
+                                            <p className="font-medium truncate">{order.customer_name}</p>
+                                            <p className="text-xs text-muted-foreground capitalize">{order.delivery_method} · {formatDate(order.created_at)}</p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="font-medium">KES {Number(order.total_amount).toLocaleString()}</p>
+                                            <span className={`text-xs px-2 py-0.5 rounded-full ${paymentColors[order.payment_status]}`}>{order.payment_status}</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2 pt-1">
+                                        <Link to={`/admin/orders/${order.id}`} className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border py-2 text-sm font-medium"><Eye className="w-4 h-4" /> View</Link>
+                                        <a href={`https://wa.me/${formatPhoneForWhatsApp(order.customer_phone)}`} target="_blank" rel="noopener noreferrer" className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-lg border py-2 text-sm font-medium text-green-700"><MessageCircle className="w-4 h-4" /> WhatsApp</a>
+                                        <a href={`tel:${order.customer_phone}`} className="inline-flex items-center justify-center rounded-lg border px-3 py-2" aria-label={`Call ${order.customer_name}`}><Phone className="w-4 h-4 text-blue-600" /></a>
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="hidden md:block overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-gray-50 text-left">
                                     <tr>
@@ -412,6 +438,7 @@ const AdminOrders = () => {
                                 </tbody>
                             </table>
                         </div>
+                        </>
                     )}
 
                     {/* Pagination */}
