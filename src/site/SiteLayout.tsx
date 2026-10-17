@@ -140,17 +140,15 @@ export default function SiteLayout() {
                     </div>
                   );
                 })}
-                {shopEnabled && <Link to="/shop" className={pathname === "/shop" ? "on" : ""}>Shop</Link>}
               </div>
               <div className="tools">
+                {shopEnabled && <Link to="/shop" className={`shoplink ${pathname === "/shop" ? "on" : ""}`}>Shop</Link>}
                 {shopEnabled && (
                   <Link className="ib cartlink" to="/cart" aria-label={`Cart, ${cartCount} items`}>
                     <Icon name="cart" />
                     {cartCount > 0 && <span className="n">{cartCount}</span>}
                   </Link>
                 )}
-                <RegisterBtn />
-                <button className="ib" onClick={toggleTheme} aria-label="Toggle dark mode"><Icon name="moon" /></button>
                 <button className="ib" id="burger" onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="sidenav"><Icon name="menu" /></button>
               </div>
             </nav>
@@ -181,7 +179,10 @@ export default function SiteLayout() {
               </>
             )}
           </div>
-          <RegisterBtn label="Register for Ocean Shujaa" />
+          <div className="sn-foot">
+            <RegisterBtn label="Register for Ocean Shujaa" />
+            <button className="btn out" onClick={toggleTheme}><Icon name="moon" />Toggle dark mode</button>
+          </div>
         </aside>
 
         <main><Outlet /></main>
