@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, requireAdmin, optionalAuth } from '../middleware/auth.js';
+import { requireAuth, requirePermission, optionalAuth } from '../middleware/auth.js';
 import {
   getProducts,
   getProduct,
@@ -14,9 +14,9 @@ const router = Router();
 router.get('/', optionalAuth, getProducts);
 router.get('/:id', getProduct);
 
-// Admin-only routes
-router.post('/', requireAuth, requireAdmin, createProduct);
-router.put('/:id', requireAuth, requireAdmin, updateProduct);
-router.delete('/:id', requireAuth, requireAdmin, deleteProduct);
+// Admin or delegated staff
+router.post('/', requireAuth, requirePermission('shop', 'manage'), createProduct);
+router.put('/:id', requireAuth, requirePermission('shop', 'manage'), updateProduct);
+router.delete('/:id', requireAuth, requirePermission('shop', 'manage'), deleteProduct);
 
 export default router;

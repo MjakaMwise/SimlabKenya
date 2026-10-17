@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requirePermission } from '../middleware/auth.js';
 import {
   createOrder,
   getOrders,
@@ -12,9 +12,9 @@ const router = Router();
 // Public route — anyone can place an order
 router.post('/', createOrder);
 
-// Admin-only routes
-router.get('/', requireAuth, requireAdmin, getOrders);
-router.get('/:id', requireAuth, requireAdmin, getOrder);
-router.patch('/:id', requireAuth, requireAdmin, updateOrder);
+// Admin or delegated staff
+router.get('/', requireAuth, requirePermission('orders', 'view'), getOrders);
+router.get('/:id', requireAuth, requirePermission('orders', 'view'), getOrder);
+router.patch('/:id', requireAuth, requirePermission('orders', 'manage'), updateOrder);
 
 export default router;

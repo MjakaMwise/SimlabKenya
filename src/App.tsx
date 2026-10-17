@@ -30,6 +30,7 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminAbstracts from "./pages/admin/AdminAbstracts";
 import AdminAbstractDetail from "./pages/admin/AdminAbstractDetail";
 import AdminOceanShujaa from "./pages/admin/AdminOceanShujaa";
+import AdminStaff from "./pages/admin/AdminStaff";
 import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
@@ -71,7 +72,7 @@ const App = () => (
               <Route
                 path="/admin/orders"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute area="orders">
                     <AdminOrders />
                   </ProtectedRoute>
                 }
@@ -79,7 +80,7 @@ const App = () => (
               <Route
                 path="/admin/orders/:orderNumber"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute area="orders">
                     <AdminOrderDetail />
                   </ProtectedRoute>
                 }
@@ -87,7 +88,7 @@ const App = () => (
               <Route
                 path="/admin/products"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute area="shop">
                     <AdminProducts />
                   </ProtectedRoute>
                 }
@@ -95,7 +96,7 @@ const App = () => (
               <Route
                 path="/admin/abstracts"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute area="abstracts">
                     <AdminAbstracts />
                   </ProtectedRoute>
                 }
@@ -103,7 +104,7 @@ const App = () => (
               <Route
                 path="/admin/abstracts/:id"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute area="abstracts">
                     <AdminAbstractDetail />
                   </ProtectedRoute>
                 }
@@ -111,8 +112,16 @@ const App = () => (
               <Route
                 path="/admin/ocean-shujaa"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute adminOnly>
                     <AdminOceanShujaa />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/staff"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AdminStaff />
                   </ProtectedRoute>
                 }
               />

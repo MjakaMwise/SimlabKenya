@@ -3,6 +3,7 @@ import { z } from 'zod';
 import pool from '../config/postgres.js';
 import { sendOTPEmail, sendTestEmail, verifyEmailTransport, explainEmailError } from '../services/emailService.js';
 import { getAbstractsFromFirestore } from '../services/firebaseService.js';
+import { can } from '../services/permissions.js';
 import {
   hashPassword, verifyPassword, generateOtp, hashOtp, signToken,
 } from '../services/authService.js';
@@ -36,7 +37,7 @@ export const login = async (req: Request, res: Response) => {
   if (!parsed.success) return res.status(400).json({ error: 'Email and password are required' });
 
   const { email, password } = parsed.data;
-  const { rows } = await pool.query('SELECT id, email, password_hash FROM admin_users WHERE email = $1', [email]);
+  const { rows } = await pool.query('SELECT id, email, password_hash FROM admin_users WHERE email = $1 AND active', [email]);
   const admin = rows[0];
   const ok = verifyPassword(password, admin?.password_hash ?? DUMMY_HASH) && !!admin;
   if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
@@ -85,7 +86,7 @@ export const verifyOTP = async (req: Request, res: Response) => {
   res.json({ success: true, token: signToken(admin, 'session'), user: admin });
 };
 
-// POST /api/admin/change-password — admin only
+// POST /api/admin/change-password — any signed-in admin or staff member (own password)
 export const changePassword = async (req: Request, res: Response) => {
   const parsed = passwordSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -114,20 +115,24 @@ export const testEmail = async (req: Request, res: Response) => {
 
 // GET /api/admin/me — admin only
 export const getMe = async (req: Request, res: Response) => {
-  res.json({ email: req.user?.email, id: req.user?.id });
+  const { id, email, name, role, permissions } = req.user!;
+  res.json({ id, email, name, role, permissions });
 };
 
 // GET /api/admin/stats — admin only
-export const getStats = async (_req: Request, res: Response) => {
+export const getStats = async (req: Request, res: Response) => {
+  // Staff only see the figures for the areas they have been delegated.
+  const canOrders = can(req.user, 'orders', 'view');
+  const canAbstracts = can(req.user, 'abstracts', 'view');
   const [totals, recent, abstracts] = await Promise.all([
-    pool.query(`SELECT
+    !canOrders ? { rows: [{}] } : pool.query(`SELECT
         count(*)::int AS "totalOrders",
         count(*) FILTER (WHERE order_status = 'pending')::int AS "pendingOrders",
         count(*) FILTER (WHERE order_status = 'completed')::int AS "completedOrders",
         COALESCE(sum(total_amount) FILTER (WHERE payment_status = 'paid'), 0) AS "totalRevenue"
       FROM orders`),
-    pool.query('SELECT * FROM orders ORDER BY created_at DESC LIMIT 10'),
-    getAbstractsFromFirestore().catch(() => [] as { status?: string }[]),
+    canOrders ? pool.query('SELECT * FROM orders ORDER BY created_at DESC LIMIT 10') : { rows: [] },
+    canAbstracts ? getAbstractsFromFirestore().catch(() => [] as { status?: string }[]) : [],
   ]);
 
   res.json({

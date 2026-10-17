@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import pool from '../config/postgres.js';
+import { can } from '../services/permissions.js';
 
 const productSchema = z.object({
   name: z.string().min(1),
@@ -25,7 +26,7 @@ export const getProducts = async (req: Request, res: Response) => {
   const params: unknown[] = [];
 
   // Public callers only see available products
-  if (!req.user) where.push('is_available = true');
+  if (!can(req.user, 'shop', 'view')) where.push('is_available = true');
   else if (available !== undefined) { params.push(available === 'true'); where.push(`is_available = $${params.length}`); }
   if (category) { params.push(String(category)); where.push(`category = $${params.length}`); }
 
