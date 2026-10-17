@@ -570,3 +570,10 @@
 .sl .reg-body{padding:16px 28px 28px}
 .sl .pclose{background:rgba(0,0,0,.28)}
 .sl .reg-card .pclose{background:var(--panel2);color:var(--ink)}
+
+/* Ocean Shujaa feature in the home hero */
+.sl .hero-os{display:flex;align-items:center;gap:22px;max-width:640px;margin:0 auto 26px;padding:18px 22px;text-align:left;border:1px solid rgba(255,255,255,.22);border-radius:18px;background:rgba(8,43,59,.55);backdrop-filter:blur(6px)}
+.sl .hero-os>img{width:clamp(110px,22vw,170px);height:auto;flex:none}
+.sl .hero-os p{margin:10px 0 14px;color:#c3d9e4;font-size:1rem}
+.sl .hero-os .row{justify-content:flex-start}
+@media (max-width:560px){.sl .hero-os{flex-direction:column;text-align:center}.sl .hero-os .row{justify-content:center}}

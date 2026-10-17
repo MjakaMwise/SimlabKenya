@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Icon } from "@/site/Icon";
-import { Go, Cta, SectionHead } from "@/site/ui";
+import { Go, Cta, SectionHead, RegisterBtn } from "@/site/ui";
 import { HexHero } from "@/site/HexHero";
 import { WhoWeAre } from "@/site/WhoWeAre";
 import { IMG } from "@/site/data";
@@ -30,8 +30,18 @@ const Index = () => (
           <div className="eyebrow">Science in Motion</div>
           <h1>SIM-Lab <em>Kenya</em></h1>
           <p className="sub">Empowering a new generation of science-minded individuals driving innovation and sustainable development in Kenya and beyond</p>
+          <div className="hero-os">
+            <img src={IMG.ostl} alt="Ocean Shujaa" width={704} height={477} />
+            <div>
+              <span className="pill">NEW HOLIDAY PROGRAM</span>
+              <p>From the Ocean to the Laboratory. Five days of real ocean science for primary school to college students.</p>
+              <div className="row">
+                <RegisterBtn label="Register for Ocean Shujaa" cls="go xl" />
+                <Go to="/oceanshujaa" cls="lt xl">Learn more</Go>
+              </div>
+            </div>
+          </div>
           <div className="row">
-            <Go to="/oceanshujaa" cls="go xl">Join Us Today</Go>
             <Go to="/programs" cls="lt xl">Explore Programs</Go>
           </div>
           <div className="stats">
