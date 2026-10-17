@@ -197,15 +197,15 @@ if [ "$VERIFY_ONLY" -eq 0 ]; then
   derive ALLOWED_ORIGINS "https://$OLD_DOMAIN,https://www.$OLD_DOMAIN" "https://$DOMAIN,https://www.$DOMAIN"
   derive ADMIN_DASHBOARD_URL "https://$OLD_DOMAIN/admin" "https://$DOMAIN/admin"
 
-  env_need GMAIL_USER "Gmail address that sends emails (admin login codes)"
-  env_need GMAIL_APP_PASSWORD "Gmail app password" secret
-  [ -n "$(env_get ADMIN_EMAIL)" ] || env_set ADMIN_EMAIL "$(env_get GMAIL_USER)"
+  env_need RESEND_API_KEY "Resend API key (resend.com/api-keys)" secret
+  env_need EMAIL_FROM "Sender address on your Resend-verified domain, e.g. no-reply@$DOMAIN"
+  env_need ADMIN_EMAIL "Admin email that receives order/abstract notifications"
   ok ".env completed"
 fi
 
 # validate (also runs in --verify-only)
 BAD=0
-for k in SITE_DOMAIN SITE_ADDRESS POSTGRES_PASSWORD JWT_SECRET GMAIL_USER GMAIL_APP_PASSWORD; do
+for k in SITE_DOMAIN SITE_ADDRESS POSTGRES_PASSWORD JWT_SECRET RESEND_API_KEY EMAIL_FROM ADMIN_EMAIL; do
   [ -n "$(env_get "$k")" ] || { printf '  %s✖%s %s is empty\n' "$R" "$N" "$k"; BAD=1; }
 done
 [ "$BAD" -eq 0 ] || die "Fill the empty values in .env and re-run."
@@ -360,14 +360,14 @@ else
     if [ -n "$TO" ]; then
       if dc exec -T -e TEST_EMAIL_TO="$TO" api npx tsx server/scripts/test-email.ts; then
         ok "Test email accepted for $TO"
-        interactive && { read -r -p "  Did it arrive (check spam too)? [Y/n] " GOT; case "$GOT" in n|N) FAIL=1; printf '  %s✖%s Email was accepted but did not arrive — check the spam folder and Gmail "Sent" folder.\n' "$R" "$N" ;; esac; }
+        interactive && { read -r -p "  Did it arrive (check spam too)? [Y/n] " GOT; case "$GOT" in n|N) FAIL=1; printf '  %s✖%s Email was accepted but did not arrive — check the spam folder and the Resend dashboard logs.\n' "$R" "$N" ;; esac; }
       else
         FAIL=1
       fi
     fi
   else
     FAIL=1
-    printf '  %s✖%s Admin login codes cannot be sent until this is fixed. Edit GMAIL_USER / GMAIL_APP_PASSWORD in .env, then: docker compose up -d api && ./deploy/test-email.sh\n' "$R" "$N"
+    printf '  %s✖%s Admin login codes cannot be sent until this is fixed. Edit RESEND_API_KEY / EMAIL_FROM in .env, then: docker compose up -d api && ./deploy/test-email.sh\n' "$R" "$N"
   fi
 fi
 
