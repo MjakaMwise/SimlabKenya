@@ -7,7 +7,7 @@ const to = process.env.TEST_EMAIL_TO?.trim();
 
 try {
   await verifyEmailTransport();
-  console.log(`✔ SMTP login OK (${process.env.GMAIL_USER})`);
+  console.log(`✔ Resend API key OK (sending as ${process.env.EMAIL_FROM || 'onboarding@resend.dev'})`);
   if (to) {
     const id = await sendTestEmail(to);
     console.log(`✔ Test message accepted for ${to} (${id}). Check the inbox (and spam folder).`);

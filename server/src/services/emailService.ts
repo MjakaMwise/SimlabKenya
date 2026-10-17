@@ -1,4 +1,4 @@
-import { createTransporter, ADMIN_EMAIL, ADMIN_DASHBOARD_URL, SUPPORT_PHONE } from '../config/email.js';
+import { createTransporter, FROM_ADDRESS, ResendError, ADMIN_EMAIL, ADMIN_DASHBOARD_URL, SUPPORT_PHONE } from '../config/email.js';
 import { Order, AbstractSubmission } from '../types/index.js';
 
 const EMAIL_TIMEOUT_MS = 12000;
@@ -154,11 +154,11 @@ const buildCustomerOrderHtml = (order: Order): string => `
 
 export const sendOrderEmails = async (order: Order): Promise<void> => {
   const transporter = createTransporter();
-  const from = `"SIM-Lab Kenya" <${process.env.GMAIL_USER}>`;
+  const from = `"SIM-Lab Kenya" <${FROM_ADDRESS}>`;
 
   await withTimeout(
     transporter.sendMail({
-      from: `"SIM-Lab Shop" <${process.env.GMAIL_USER}>`,
+      from: `"SIM-Lab Shop" <${FROM_ADDRESS}>`,
       to: ADMIN_EMAIL,
       subject: `New Order #${order.order_number} — ${order.customer_name}`,
       html: buildAdminOrderHtml(order),
@@ -246,7 +246,7 @@ export const sendAbstractEmails = async (
 
   await withTimeout(
     transporter.sendMail({
-      from: `"SIM-Lab Science Fair" <${process.env.GMAIL_USER}>`,
+      from: `"SIM-Lab Science Fair" <${FROM_ADDRESS}>`,
       to: ADMIN_EMAIL,
       subject: `New Abstract: ${data.projectTitle} — ${studentList} (${data.schoolName})`,
       html: adminHtml,
@@ -258,7 +258,7 @@ export const sendAbstractEmails = async (
   if (isEmail) {
     await withTimeout(
       transporter.sendMail({
-        from: `"SIM-Lab Kenya" <${process.env.GMAIL_USER}>`,
+        from: `"SIM-Lab Kenya" <${FROM_ADDRESS}>`,
         to: data.teacherEmail,
         subject: `Abstract Received: ${data.projectTitle} — SIM-Lab Science Fair`,
         html: teacherHtml,
@@ -346,7 +346,7 @@ export const sendAbstractStatusEmail = async (data: {
   const transporter = createTransporter();
   await withTimeout(
     transporter.sendMail({
-      from: `"SIM-Lab Science Fair" <${process.env.GMAIL_USER}>`,
+      from: `"SIM-Lab Science Fair" <${FROM_ADDRESS}>`,
       to: data.teacherEmail,
       subject: `Abstract ${style.label}: ${data.projectTitle} — SIM-Lab Science Fair`,
       html,
@@ -384,7 +384,7 @@ export const sendOTPEmail = async (email: string, otp: string): Promise<void> =>
 
   await withTimeout(
     transporter.sendMail({
-      from: process.env.GMAIL_USER,
+      from: `"SIM-Lab Kenya" <${FROM_ADDRESS}>`,
       to: email,
       subject: 'Your SIM-Lab Kenya Admin 2FA Code',
       html,
@@ -395,19 +395,22 @@ export const sendOTPEmail = async (email: string, otp: string): Promise<void> =>
 
 // ── Delivery verification ─────────────────────────────────────────────────────
 
-/** Turns a nodemailer error into something an operator can act on. */
+/** Turns a Resend error into something an operator can act on. */
 export const explainEmailError = (err: unknown): string => {
-  const e = err as { code?: string; responseCode?: number; message?: string };
-  if (e.code === 'EAUTH' || e.responseCode === 535) {
-    return 'Gmail rejected the login. GMAIL_APP_PASSWORD must be a 16-character Google App Password (needs 2-Step Verification), not the normal account password, and GMAIL_USER must be the same account.';
+  const e = err as Partial<ResendError> & { cause?: { code?: string } };
+  if (e.code === 'ENOKEY') return 'RESEND_API_KEY is not set in .env.';
+  if (e.status === 401 || e.status === 403) {
+    return e.code === 'validation_error' || /domain/i.test(e.message ?? '')
+      ? `Resend rejected the sender: ${e.message}. EMAIL_FROM must be an address on a domain verified at resend.com/domains.`
+      : 'Resend rejected the API key. Create a key at resend.com/api-keys and set RESEND_API_KEY.';
   }
-  if (['ETIMEDOUT', 'ECONNECTION', 'ESOCKET', 'ECONNREFUSED', 'EDNS', 'ENOTFOUND'].includes(e.code ?? '')) {
-    return 'Could not reach smtp.gmail.com:465. The VPS firewall/provider may block outbound port 465, or DNS is failing.';
-  }
+  if (e.status === 422) return `Resend rejected the message: ${e.message}. Check that EMAIL_FROM is on a verified domain.`;
+  if (e.status === 429) return 'Resend rate limit hit; try again shortly.';
+  if (e.cause?.code || /fetch failed/i.test(e.message ?? '')) return 'Could not reach api.resend.com over HTTPS. Check the VPS network/DNS.';
   return e.message ?? 'Unknown email error';
 };
 
-/** Logs in to the SMTP server without sending anything. Throws on failure. */
+/** Checks the API key without sending anything. Throws on failure. */
 export const verifyEmailTransport = async (): Promise<void> => {
   await withTimeout(createTransporter().verify(), EMAIL_TIMEOUT_MS);
 };
@@ -416,15 +419,12 @@ export const verifyEmailTransport = async (): Promise<void> => {
 export const sendTestEmail = async (to: string): Promise<string> => {
   const info = await withTimeout(
     createTransporter().sendMail({
-      from: `"SIM-Lab Kenya" <${process.env.GMAIL_USER}>`,
+      from: `"SIM-Lab Kenya" <${FROM_ADDRESS}>`,
       to,
       subject: 'SIM-Lab Kenya: email delivery test',
       text: `This is a test message from the SIM-Lab Kenya server, sent ${new Date().toISOString()}.\nIf you can read this, admin login codes and order emails will be delivered.`,
     }),
     EMAIL_TIMEOUT_MS
   );
-  if (!info.accepted?.includes(to) || info.rejected?.length) {
-    throw new Error(`SMTP server did not accept the message for ${to} (rejected: ${info.rejected?.join(', ') || 'none'})`);
-  }
   return info.messageId;
 };
