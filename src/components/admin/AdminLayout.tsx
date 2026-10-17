@@ -14,11 +14,12 @@ import {
     X,
     ChevronDown,
     Users,
+    Download,
 } from "lucide-react";
 import { useAdminAuth, Area } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import { useTeamUnread } from "@/hooks/useTeamUnread";
-import { useAdminManifest } from "@/lib/pwa";
+import { useAdminManifest, useInstallPrompt } from "@/lib/pwa";
 import logo from "@/assets/logo.jpeg";
 
 type NavItem = { label: string; href: string; icon: typeof Users; area?: Area; adminOnly?: boolean };
@@ -45,6 +46,14 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     const location = useLocation();
     const teamUnread = useTeamUnread();
     useAdminManifest();
+    const { canInstall, install } = useInstallPrompt();
+    const onPath = (href: string) => (href === "/admin" ? location.pathname === "/admin" : location.pathname.startsWith(href));
+    const pageTitle = visibleNav.find((i) => onPath(i.href))?.label ?? "Admin";
+    // The phone's tab bar holds the everyday places; everything else lives in the side menu.
+    const tabs = [
+        ...visibleNav.filter((i) => i.href === "/admin" || i.href === "/admin/team"),
+        ...visibleNav.filter((i) => ["/admin/orders", "/admin/abstracts", "/admin/products"].includes(i.href)),
+    ].slice(0, 4);
 
     const handleSignOut = async () => {
         await signOut();
@@ -53,16 +62,17 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Mobile Header */}
-            <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b z-40 h-16 flex items-center justify-between px-4">
+            <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b z-40 h-16 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)] box-content">
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => setIsSidebarOpen(true)}
                         className="p-2 hover:bg-gray-100 rounded-lg"
+                        aria-label="Open menu"
                     >
                         <Menu className="w-6 h-6" />
                     </button>
                     <img src={logo} alt="SIM-Lab" className="h-8 w-8 rounded-full" />
-                    <span className="font-heading font-bold text-primary">Admin</span>
+                    <span className="font-heading font-bold text-primary truncate">{pageTitle}</span>
                 </div>
                 <div className="relative">
                     <button
@@ -169,6 +179,11 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                             <p className="text-xs text-muted-foreground">{isFullAdmin ? "Administrator" : "Staff"}</p>
                         </div>
                     </div>
+                    {canInstall && (
+                        <Button variant="outline" size="sm" className="w-full mb-2" onClick={install}>
+                            <Download className="w-4 h-4" /> Install app
+                        </Button>
+                    )}
                     <Button
                         variant="outline"
                         size="sm"
@@ -181,9 +196,30 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             </aside>
 
             {/* Main Content */}
-            <main className="lg:ml-64 min-h-screen pt-16 lg:pt-0">
+            <main className="lg:ml-64 min-h-screen pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
                 <div className="p-4 lg:p-8">{children}</div>
             </main>
+
+            {/* Phone tab bar */}
+            <nav aria-label="Quick links" className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t grid pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${tabs.length + 1}, minmax(0, 1fr))` }}>
+                {tabs.map((item) => {
+                    const Icon = item.icon;
+                    const active = onPath(item.href);
+                    return (
+                        <Link key={item.href} to={item.href} aria-current={active ? "page" : undefined} className={`relative flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium ${active ? "text-primary" : "text-gray-500"}`}>
+                            <Icon className="w-5 h-5" />
+                            {item.label}
+                            {item.href === "/admin/team" && teamUnread > 0 && (
+                                <span className="absolute top-1 left-1/2 ml-2 min-w-4 h-4 px-1 rounded-full bg-amber-400 text-black text-[10px] font-bold grid place-items-center">{teamUnread}</span>
+                            )}
+                        </Link>
+                    );
+                })}
+                <button onClick={() => setIsSidebarOpen(true)} className="flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-gray-500">
+                    <Menu className="w-5 h-5" />
+                    More
+                </button>
+            </nav>
         </div>
     );
 };
