@@ -18,8 +18,12 @@ import Gallery from "./pages/Gallery";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
 import NotFound from "./pages/NotFound";
-// Shop, Cart, Checkout, OrderConfirmation and Abstract pages are kept in src/pages
-// but are not routed for now.
+import Shop from "./pages/Shop";
+import Cart from "./pages/Cart";
+import Checkout from "./pages/Checkout";
+import OrderConfirmation from "./pages/OrderConfirmation";
+import Abstract from "./pages/Abstract";
+import ShopGate from "./components/shop/ShopGate";
 
 // Admin Pages
 import AdminLogin from "./pages/admin/AdminLogin";
@@ -54,6 +58,12 @@ const App = () => (
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/contact" element={<Contact />} />
+              {/* Abstract submission is always open; the shop pages only work while an admin has switched the shop on */}
+              <Route path="/abstract" element={<Abstract />} />
+              <Route path="/shop" element={<ShopGate><Shop /></ShopGate>} />
+              <Route path="/cart" element={<ShopGate><Cart /></ShopGate>} />
+              <Route path="/checkout" element={<ShopGate><Checkout /></ShopGate>} />
+              <Route path="/order-confirmation" element={<ShopGate><OrderConfirmation /></ShopGate>} />
               </Route>
               {/* older links */}
               <Route path="/holiday-program" element={<Navigate to="/oceanshujaa" replace />} />

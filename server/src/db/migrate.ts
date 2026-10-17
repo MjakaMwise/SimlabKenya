@@ -13,6 +13,13 @@ const STATEMENTS = [
        ALTER TABLE admin_users ADD CONSTRAINT admin_users_role_check CHECK (role IN ('admin', 'staff'));
      END IF;
    END $$`,
+  `ALTER TABLE products ADD COLUMN IF NOT EXISTS images TEXT[] NOT NULL DEFAULT '{}'`,
+  `CREATE TABLE IF NOT EXISTS site_settings (
+     key   TEXT PRIMARY KEY,
+     value JSONB NOT NULL
+   )`,
+  // The shop starts switched off; an admin turns it on from Admin > Products.
+  `INSERT INTO site_settings (key, value) VALUES ('shop_enabled', 'false'::jsonb) ON CONFLICT (key) DO NOTHING`,
 ];
 
 export const migrate = async (): Promise<void> => {

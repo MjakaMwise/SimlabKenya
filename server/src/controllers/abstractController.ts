@@ -126,7 +126,7 @@ export const listAbstracts = async (_req: Request, res: Response) => {
 // GET /api/abstracts/:id — admin only
 export const getAbstract = async (req: Request, res: Response) => {
   try {
-    const abstract = await getAbstractFromFirestore(req.params.id);
+    const abstract = await getAbstractFromFirestore(String(req.params.id));
     if (!abstract) return res.status(404).json({ error: 'Abstract not found' });
     res.json(abstract);
   } catch (err) {
@@ -144,8 +144,8 @@ export const updateAbstractStatus = async (req: Request, res: Response) => {
   }
   try {
     const [abstract] = await Promise.all([
-      getAbstractFromFirestore(req.params.id),
-      updateAbstractStatusInFirestore(req.params.id, status),
+      getAbstractFromFirestore(String(req.params.id)),
+      updateAbstractStatusInFirestore(String(req.params.id), status),
     ]);
 
     if (abstract) {

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import pool from '../config/postgres.js';
+import { sendOceanShujaaRegistrationEmail, sendOceanShujaaStatusEmail } from '../services/emailService.js';
 
 const LEVELS = ['primary', 'junior_secondary', 'senior_secondary', 'college', 'group', 'other'] as const;
 const STATUSES = ['pending', 'confirmed', 'waitlisted', 'cancelled'] as const;
@@ -49,6 +50,14 @@ export const createRegistration = async (req: Request, res: Response) => {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
     [d.participantName, d.participantAge ?? null, d.level, d.institution, d.guardianName,
      d.guardianPhone, d.guardianEmail, d.groupSize, d.notes || null]
+  );
+  // Email failures must not fail a registration that is already saved.
+  sendOceanShujaaRegistrationEmail({
+    participantName: d.participantName, level: d.level, institution: d.institution,
+    guardianName: d.guardianName, guardianEmail: d.guardianEmail, guardianPhone: d.guardianPhone,
+    groupSize: d.groupSize, status: 'pending',
+  }).catch((err) =>
+    console.error('Ocean Shujaa registration email failed:', err)
   );
   res.status(201).json({ success: true });
 };
@@ -102,12 +111,21 @@ export const updateRegistration = async (req: Request, res: Response) => {
   if (parsed.data.status !== undefined) { params.push(parsed.data.status); sets.push(`status = $${params.length}`); }
   if (parsed.data.adminNotes !== undefined) { params.push(parsed.data.adminNotes || null); sets.push(`admin_notes = $${params.length}`); }
   params.push(id);
+  const previous = parsed.data.status !== undefined
+    ? (await pool.query('SELECT status FROM ocean_shujaa_registrations WHERE id = $1', [id])).rows[0]?.status
+    : undefined;
   const { rows } = await pool.query(
     `UPDATE ocean_shujaa_registrations SET ${sets.join(', ')} WHERE id = $${params.length} RETURNING ${COLUMNS}`,
     params
   );
   if (!rows.length) return res.status(404).json({ error: 'Registration not found' });
-  res.json({ registration: rows[0] });
+  const r = rows[0];
+  if (parsed.data.status !== undefined && previous !== r.status) {
+    sendOceanShujaaStatusEmail({ ...r, status: r.status }).catch((err) =>
+      console.error('Ocean Shujaa status email failed:', err)
+    );
+  }
+  res.json({ registration: r });
 };
 
 // DELETE /api/ocean-shujaa/admin/registrations/:id

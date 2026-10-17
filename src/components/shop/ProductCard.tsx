@@ -1,18 +1,14 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Plus, Minus, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useCart } from "@/hooks/useCart";
-import { useToast } from "@/hooks/use-toast";
+import { useSite } from "@/site/SiteContext";
 
-// Product images
+// Pictures bundled with the site, used until an admin uploads one for the product
 import wallClockImg from "@/assets/products/wall-clock.jpg";
 import labCoatImg from "@/assets/products/lab-coat.jpg";
 import sweatshirtImg from "@/assets/products/sweatshirt.jpg";
 import cardGameImg from "@/assets/products/element-fusion-game.jpg";
 import calendarImg from "@/assets/products/calendar-2026.png";
 
-// Map product names (lowercase keywords) to local images
 const productImageMap: Record<string, string> = {
   "wall clock": wallClockImg,
   "clock": wallClockImg,
@@ -26,18 +22,17 @@ const productImageMap: Record<string, string> = {
   "calendar": calendarImg,
 };
 
-// Helper to get local image based on product name
-const getProductImage = (productName: string, fallbackUrl: string): string => {
+// An uploaded picture always wins over the bundled one
+const getProductImage = (productName: string, uploadedUrl: string): string => {
+  if (uploadedUrl && uploadedUrl !== "/placeholder.svg") return uploadedUrl;
   const lowerName = productName.toLowerCase();
   for (const [keyword, imgSrc] of Object.entries(productImageMap)) {
-    if (lowerName.includes(keyword)) {
-      return imgSrc;
-    }
+    if (lowerName.includes(keyword)) return imgSrc;
   }
-  return fallbackUrl;
+  return uploadedUrl || "/placeholder.svg";
 };
 
-interface Product {
+export interface Product {
   id: string;
   name: string;
   description: string;
@@ -50,142 +45,53 @@ interface Product {
   image_url: string;
 }
 
-interface ProductCardProps {
-  product: Product;
-}
-
-const ProductCard = ({ product }: ProductCardProps) => {
-  const [selectedSize, setSelectedSize] = useState<string>("");
+const ProductCard = ({ product }: { product: Product }) => {
+  const [size, setSize] = useState("");
   const [quantity, setQuantity] = useState(1);
-  const [isAdded, setIsAdded] = useState(false);
   const { addItem } = useCart();
-  const { toast } = useToast();
+  const { toast } = useSite();
+  const img = getProductImage(product.name, product.image_url);
+  const soldOut = product.stock_quantity <= 0;
 
-  const handleAddToCart = () => {
-    if (product.has_sizes && !selectedSize) {
-      toast({
-        title: "Please select a size",
-        description: "You need to choose a size before adding to cart.",
-        variant: "destructive",
-      });
+  const add = () => {
+    if (product.has_sizes && !size) {
+      toast("Choose a size before adding to the cart.");
       return;
     }
-
-    addItem(
-      {
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        size: selectedSize || undefined,
-        image_url: getProductImage(product.name, product.image_url),
-      },
-      quantity
-    );
-
-    setIsAdded(true);
-    toast({
-      title: "Added to cart!",
-      description: `${quantity}x ${product.name}${selectedSize ? ` (${selectedSize})` : ""} added to your cart.`,
-    });
-
-    setTimeout(() => {
-      setIsAdded(false);
-      setQuantity(1);
-      setSelectedSize("");
-    }, 2000);
+    addItem({ id: product.id, name: product.name, price: product.price, size: size || undefined, image_url: img }, quantity);
+    toast(`${quantity} x ${product.name}${size ? ` (${size})` : ""} added to your cart.`);
+    setQuantity(1);
+    setSize("");
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      whileHover={{ y: -5 }}
-      className="bg-card rounded-2xl shadow-lg overflow-hidden border border-border"
-    >
-      {/* Image */}
-      <div className="aspect-square relative bg-muted">
-        <img
-          src={getProductImage(product.name, product.image_url)}
-          alt={product.name}
-          className="w-full h-full object-cover"
-        />
-        <span className="absolute top-3 left-3 bg-accent text-accent-foreground text-xs font-bold px-2 py-1 rounded-full">
-          In Stock
-        </span>
-        <span className="absolute top-3 right-3 bg-primary/90 text-primary-foreground text-xs font-medium px-2 py-1 rounded-full">
-          {product.category}
-        </span>
+    <article className="prod">
+      <div className="pic">
+        <img src={img} alt={product.name} loading="lazy" />
+        <span className="tag">{product.category}</span>
+        <span className="tag stock">{soldOut ? "Sold out" : "In stock"}</span>
       </div>
-
-      {/* Content */}
-      <div className="p-4 space-y-3">
-        <h3 className="font-heading font-bold text-lg">{product.name}</h3>
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {product.description}
-        </p>
-        <p className="text-2xl font-bold text-accent">
-          KES {product.price.toLocaleString()}
-        </p>
-
-        {/* Size Selector */}
+      <div className="pbd">
+        <h3>{product.name}</h3>
+        {product.description && <p style={{ color: "var(--dim)", fontSize: ".95rem" }}>{product.description}</p>}
+        <div className="price">KES {product.price.toLocaleString()}</div>
         {product.has_sizes && product.available_sizes && (
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Size</label>
-            <div className="flex flex-wrap gap-2">
-              {product.available_sizes.map((size) => (
-                <button
-                  key={size}
-                  onClick={() => setSelectedSize(size)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedSize === size
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-muted hover:bg-muted/80"
-                    }`}
-                >
-                  {size}
-                </button>
-              ))}
-            </div>
+          <div className="sizes" role="group" aria-label="Size">
+            {product.available_sizes.map((s) => (
+              <button key={s} type="button" aria-pressed={size === s} onClick={() => setSize(s)}>{s}</button>
+            ))}
           </div>
         )}
-
-        {/* Quantity Selector */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium">Qty:</span>
-          <div className="flex items-center gap-2 bg-muted rounded-lg">
-            <button
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="p-2 hover:bg-background/50 rounded-l-lg transition-colors"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
-            <span className="w-8 text-center font-medium">{quantity}</span>
-            <button
-              onClick={() => setQuantity((q) => Math.min(99, q + 1))}
-              className="p-2 hover:bg-background/50 rounded-r-lg transition-colors"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
+        <div className="row" style={{ alignItems: "center" }}>
+          <div className="qty">
+            <button type="button" aria-label="Decrease quantity" onClick={() => setQuantity((q) => Math.max(1, q - 1))}>−</button>
+            <span>{quantity}</span>
+            <button type="button" aria-label="Increase quantity" onClick={() => setQuantity((q) => q + 1)}>+</button>
           </div>
+          <button type="button" className="btn go" disabled={soldOut} onClick={add}>Add to cart</button>
         </div>
-
-        {/* Add to Cart Button */}
-        <Button
-          variant="cta"
-          className="w-full"
-          onClick={handleAddToCart}
-          disabled={isAdded}
-        >
-          {isAdded ? (
-            <>
-              <Check className="w-4 h-4" /> Added!
-            </>
-          ) : (
-            "Add to Cart"
-          )}
-        </Button>
       </div>
-    </motion.div>
+    </article>
   );
 };
 
