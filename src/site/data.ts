@@ -42,7 +42,7 @@ export const NAV: [string, string, number?][] = [
   ["/bench", "The Bench", 1],
   ["/about", "About"],
   ["/programs", "Programs"],
-  ["/ocean-shujaa", "Ocean Shujaa", 2],
+  ["/oceanshujaa", "Ocean Shujaa", 2],
   ["/gallery", "Gallery"],
   ["/faq", "FAQ"],
   ["/contact", "Contact"],

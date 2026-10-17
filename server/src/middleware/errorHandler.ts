@@ -9,6 +9,6 @@ export const errorHandler = (
   console.error('[Error]', err.stack ?? err.message);
   res.status(500).json({
     error: 'Internal server error',
-    details: err.message, // temporary — remove once root cause is identified
+    ...(process.env.NODE_ENV !== 'production' && { details: err.message }),
   });
 };

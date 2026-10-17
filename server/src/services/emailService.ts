@@ -392,3 +392,39 @@ export const sendOTPEmail = async (email: string, otp: string): Promise<void> =>
     EMAIL_TIMEOUT_MS
   );
 };
+
+// ── Delivery verification ─────────────────────────────────────────────────────
+
+/** Turns a nodemailer error into something an operator can act on. */
+export const explainEmailError = (err: unknown): string => {
+  const e = err as { code?: string; responseCode?: number; message?: string };
+  if (e.code === 'EAUTH' || e.responseCode === 535) {
+    return 'Gmail rejected the login. GMAIL_APP_PASSWORD must be a 16-character Google App Password (needs 2-Step Verification), not the normal account password, and GMAIL_USER must be the same account.';
+  }
+  if (['ETIMEDOUT', 'ECONNECTION', 'ESOCKET', 'ECONNREFUSED', 'EDNS', 'ENOTFOUND'].includes(e.code ?? '')) {
+    return 'Could not reach smtp.gmail.com:465. The VPS firewall/provider may block outbound port 465, or DNS is failing.';
+  }
+  return e.message ?? 'Unknown email error';
+};
+
+/** Logs in to the SMTP server without sending anything. Throws on failure. */
+export const verifyEmailTransport = async (): Promise<void> => {
+  await withTimeout(createTransporter().verify(), EMAIL_TIMEOUT_MS);
+};
+
+/** Sends a real message and confirms the server accepted it for the recipient. */
+export const sendTestEmail = async (to: string): Promise<string> => {
+  const info = await withTimeout(
+    createTransporter().sendMail({
+      from: `"SIM-Lab Kenya" <${process.env.GMAIL_USER}>`,
+      to,
+      subject: 'SIM-Lab Kenya: email delivery test',
+      text: `This is a test message from the SIM-Lab Kenya server, sent ${new Date().toISOString()}.\nIf you can read this, admin login codes and order emails will be delivered.`,
+    }),
+    EMAIL_TIMEOUT_MS
+  );
+  if (!info.accepted?.includes(to) || info.rejected?.length) {
+    throw new Error(`SMTP server did not accept the message for ${to} (rejected: ${info.rejected?.join(', ') || 'none'})`);
+  }
+  return info.messageId;
+};

@@ -29,6 +29,7 @@ import AdminOrderDetail from "./pages/admin/AdminOrderDetail";
 import AdminProducts from "./pages/admin/AdminProducts";
 import AdminAbstracts from "./pages/admin/AdminAbstracts";
 import AdminAbstractDetail from "./pages/admin/AdminAbstractDetail";
+import AdminOceanShujaa from "./pages/admin/AdminOceanShujaa";
 import AdminSettings from "./pages/admin/AdminSettings";
 
 const queryClient = new QueryClient();
@@ -48,12 +49,14 @@ const App = () => (
                 <Route path="/bench" element={<Bench />} />
                 <Route path="/about" element={<About />} />
                 <Route path="/programs" element={<Programs />} />
-                <Route path="/ocean-shujaa" element={<OceanShujaa />} />
+                <Route path="/oceanshujaa" element={<OceanShujaa />} />
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/contact" element={<Contact />} />
               </Route>
-              <Route path="/holiday-program" element={<Navigate to="/ocean-shujaa" replace />} />
+              {/* older links */}
+              <Route path="/holiday-program" element={<Navigate to="/oceanshujaa" replace />} />
+              <Route path="/ocean-shujaa" element={<Navigate to="/oceanshujaa" replace />} />
 
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
@@ -102,6 +105,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <AdminAbstractDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/ocean-shujaa"
+                element={
+                  <ProtectedRoute>
+                    <AdminOceanShujaa />
                   </ProtectedRoute>
                 }
               />

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import supabase from '../config/supabase.js';
+import pool from '../config/postgres.js';
 
 const productSchema = z.object({
   name: z.string().min(1),
@@ -14,41 +14,35 @@ const productSchema = z.object({
   image_url: z.string().url().optional(),
 });
 
+const isUuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v);
+const FIELDS = ['name', 'description', 'price', 'category', 'has_sizes', 'available_sizes',
+  'stock_quantity', 'is_available', 'image_url'] as const;
+
 // GET /api/products — public
 export const getProducts = async (req: Request, res: Response) => {
   const { category, available } = req.query;
-
-  let query = supabase.from('products').select('*').order('created_at', { ascending: false });
+  const where: string[] = [];
+  const params: unknown[] = [];
 
   // Public callers only see available products
-  if (!req.user) {
-    query = query.eq('is_available', true);
-  } else if (available !== undefined) {
-    query = query.eq('is_available', available === 'true');
-  }
+  if (!req.user) where.push('is_available = true');
+  else if (available !== undefined) { params.push(available === 'true'); where.push(`is_available = $${params.length}`); }
+  if (category) { params.push(String(category)); where.push(`category = $${params.length}`); }
 
-  if (category) {
-    query = query.eq('category', category as string);
-  }
-
-  const { data, error } = await query;
-  if (error) return res.status(500).json({ error: error.message });
-
-  res.json(data);
+  const { rows } = await pool.query(
+    `SELECT * FROM products ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY created_at DESC`,
+    params
+  );
+  res.json(rows);
 };
 
 // GET /api/products/:id — public
 export const getProduct = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  const { data, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if (error || !data) return res.status(404).json({ error: 'Product not found' });
-  res.json(data);
+  const id = String(req.params.id);
+  if (!isUuid(id)) return res.status(404).json({ error: 'Product not found' });
+  const { rows } = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+  if (!rows[0]) return res.status(404).json({ error: 'Product not found' });
+  res.json(rows[0]);
 };
 
 // POST /api/products — admin only
@@ -57,43 +51,44 @@ export const createProduct = async (req: Request, res: Response) => {
   if (!parsed.success) {
     return res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });
   }
-
-  const { data, error } = await supabase
-    .from('products')
-    .insert(parsed.data)
-    .select()
-    .single();
-
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json(data);
+  const d = parsed.data;
+  const { rows } = await pool.query(
+    `INSERT INTO products (name, description, price, category, has_sizes, available_sizes,
+                           stock_quantity, is_available, image_url)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+    [d.name, d.description ?? null, d.price, d.category, d.has_sizes, d.available_sizes ?? null,
+     d.stock_quantity, d.is_available, d.image_url ?? null]
+  );
+  res.status(201).json(rows[0]);
 };
 
 // PUT /api/products/:id — admin only
 export const updateProduct = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const id = String(req.params.id);
+  if (!isUuid(id)) return res.status(404).json({ error: 'Product not found' });
+  // .partial() keeps the schema's defaults out of the update only if we filter on what was actually sent
   const parsed = productSchema.partial().safeParse(req.body);
   if (!parsed.success) {
     return res.status(400).json({ error: 'Validation failed', details: parsed.error.flatten() });
   }
+  const sent = FIELDS.filter((f) => req.body && f in req.body && parsed.data[f] !== undefined);
+  if (!sent.length) return res.status(400).json({ error: 'Nothing to update' });
 
-  const { data, error } = await supabase
-    .from('products')
-    .update({ ...parsed.data, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error) return res.status(500).json({ error: error.message });
-  if (!data) return res.status(404).json({ error: 'Product not found' });
-  res.json(data);
+  const params: unknown[] = sent.map((f) => parsed.data[f]);
+  params.push(id);
+  const { rows } = await pool.query(
+    `UPDATE products SET ${sent.map((f, i) => `${f} = $${i + 1}`).join(', ')}
+     WHERE id = $${params.length} RETURNING *`,
+    params
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'Product not found' });
+  res.json(rows[0]);
 };
 
 // DELETE /api/products/:id — admin only
 export const deleteProduct = async (req: Request, res: Response) => {
-  const { id } = req.params;
-
-  const { error } = await supabase.from('products').delete().eq('id', id);
-  if (error) return res.status(500).json({ error: error.message });
-
+  const id = String(req.params.id);
+  if (!isUuid(id)) return res.status(404).json({ error: 'Product not found' });
+  await pool.query('DELETE FROM products WHERE id = $1', [id]);
   res.status(204).send();
 };

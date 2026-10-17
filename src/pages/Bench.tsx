@@ -58,7 +58,7 @@ const Bench = () => (
       </div>
     </section>
     <Cta pill="DO IT FOR REAL" title="Run these with a mentor in Mombasa" text="In the Ocean Shujaa holiday program, students sample real seawater and mangroves and analyse them in professional labs.">
-      <Go to="/ocean-shujaa" cls="go xl">See Ocean Shujaa</Go>
+      <Go to="/oceanshujaa" cls="go xl">See Ocean Shujaa</Go>
     </Cta>
   </>
 );
