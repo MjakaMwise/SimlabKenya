@@ -131,4 +131,4 @@ Everything that was in Supabase now lives in the VPS Postgres. Supabase packages
 | `api/send-otp-email.ts`, `api/verify-otp.ts` | delete | Dead Vercel functions that used Supabase. |
 | `start-setup.sh`, `.env.example`, `docs/DEPLOYMENT.md` | edit | No Supabase prompts or checks; verifies the shop tables. |
 
-Still external: Firebase (abstract submissions), Cloudinary (file uploads), Gmail (email).
+Later addendum: abstract submissions moved to Postgres, uploaded files to the `uploads` volume, and all email to Resend. Nothing runs outside the VPS apart from Resend.

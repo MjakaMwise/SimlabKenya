@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Check that the server can send email.
-#   ./deploy/test-email.sh                 verify the Gmail login only
+#   ./deploy/test-email.sh                 verify the Resend key only
 #   ./deploy/test-email.sh you@example.com verify AND send a real test message to that address
 set -Eeuo pipefail
 cd "$(dirname "$0")/.."

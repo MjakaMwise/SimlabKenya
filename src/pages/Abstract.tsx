@@ -149,7 +149,7 @@ const Abstract = () => {
     setSubmissionStatus(null);
 
     try {
-      // Build multipart form — backend handles Cloudinary upload, Firestore save, and emails
+      // Build multipart form — backend stores the files, saves the record, and sends emails
       const body = new FormData();
       body.append("schoolName", formData.schoolName.trim());
       filledStudents.forEach((name) => body.append("studentNames", name));

@@ -1,4 +1,5 @@
 import express from 'express';
+import { folderPath } from './services/fileStorage.js';
 import cors from 'cors';
 import apiRoutes from './routes/index.js';
 import { errorHandler } from './middleware/errorHandler.js';
@@ -14,10 +15,8 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://simlabkenya.co.ke',
   'https://simlabkenya.co.ke/admin',
-  'https://simlab-kenya-41nx-git-main-marshallisraelokoth-2763s-projects.vercel.app',
   ...(process.env.ALLOWED_ORIGINS?.split(',').map((o) => o.trim()) ?? []),
   process.env.ADMIN_DASHBOARD_URL,
-  process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`,
 ].filter(Boolean) as string[];
 
 app.use(
@@ -37,6 +36,15 @@ app.use(
 // ── Body parsers ──────────────────────────────────────────────────────────────
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Shop product pictures are public. Abstract files are not served here: they go through the
+// authenticated /api/abstracts/:id/files/:fileId route.
+app.use('/api/uploads/shop', express.static(folderPath('shop'), {
+  index: false,
+  maxAge: '30d',
+  immutable: true,
+  setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+}));
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api', apiRoutes);

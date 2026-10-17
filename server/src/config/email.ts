@@ -28,7 +28,7 @@ const toError = (e: { message: string; statusCode?: number | null; name?: string
 export const createTransporter = () => {
   const resend = getClient();
   return {
-    // Mirrors the nodemailer result shape the callers already use.
+    // Keeps the sendMail({ from, to, subject, html }) shape the callers use.
     async sendMail(opts: MailOptions): Promise<{ messageId: string; accepted: string[]; rejected: string[] }> {
       const to = Array.isArray(opts.to) ? opts.to : [opts.to];
       const { data, error } = await resend.emails.send({ ...opts, to } as Parameters<typeof resend.emails.send>[0]);

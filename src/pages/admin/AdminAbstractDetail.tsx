@@ -109,6 +109,22 @@ const AdminAbstractDetail = () => {
         }
     };
 
+    // Files are only served to signed-in staff, so fetch with the token and save the result.
+    const downloadFile = async (file: AbstractFile) => {
+        try {
+            const res = await fetch(file.url, { headers: { Authorization: `Bearer ${token}` } });
+            if (!res.ok) throw new Error("Download failed");
+            const url = URL.createObjectURL(await res.blob());
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = file.originalName;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch {
+            toast({ title: "Error", description: "Could not download the file", variant: "destructive" });
+        }
+    };
+
     const handleStatusChange = async (newStatus: string) => {
         if (!abstract) return;
         setIsUpdating(true);
@@ -246,15 +262,13 @@ const AdminAbstractDetail = () => {
                                                         <Eye className="w-4 h-4 text-gray-600" />
                                                     </button>
                                                 )}
-                                                <a
-                                                    href={file.url}
-                                                    download={file.originalName}
-                                                    rel="noopener noreferrer"
+                                                <button
+                                                    onClick={() => downloadFile(file)}
                                                     className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
                                                     title="Download"
                                                 >
                                                     <Download className="w-4 h-4 text-gray-600" />
-                                                </a>
+                                                </button>
                                             </div>
                                         </div>
                                     ))}
@@ -392,12 +406,12 @@ const AdminAbstractDetail = () => {
                         description: selectedFile.abstract.projectDescription,
                         fileType: getFileTypeFromMimeType(selectedFile.file.mimeType),
                         viewUrl: selectedFile.file.url,
-                        downloadUrl: selectedFile.file.url,
                         fileName: selectedFile.file.originalName,
                         fileSize: selectedFile.file.size,
                         submittedAt: selectedFile.abstract.submittedAt,
                         status: selectedFile.abstract.status,
                     }}
+                    token={token}
                     onClose={() => setSelectedFile(null)}
                 />
             )}

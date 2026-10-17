@@ -6,6 +6,7 @@ import {
   listAbstracts,
   getAbstract,
   updateAbstractStatus,
+  downloadAbstractFile,
 } from '../controllers/abstractController.js';
 
 const upload = multer({
@@ -20,6 +21,7 @@ router.post('/', upload.array('files', 10), submitAbstract);
 
 // Admin or delegated staff
 router.get('/', requireAuth, requirePermission('abstracts', 'view'), listAbstracts);
+router.get('/:id/files/:fileId', requireAuth, requirePermission('abstracts', 'view'), downloadAbstractFile);
 router.get('/:id', requireAuth, requirePermission('abstracts', 'view'), getAbstract);
 router.patch('/:id/status', requireAuth, requirePermission('abstracts', 'manage'), updateAbstractStatus);
 

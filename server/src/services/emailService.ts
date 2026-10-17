@@ -128,7 +128,7 @@ export const sendOrderEmails = async (order: Order): Promise<void> => {
 // ── Abstract Emails ───────────────────────────────────────────────────────────
 
 export const sendAbstractEmails = async (
-  data: AbstractSubmission & { fileName: string; viewUrl: string }
+  data: AbstractSubmission & { fileName: string; abstractId: string }
 ): Promise<void> => {
   const transporter = createTransporter();
   const studentLabel = data.studentNames.length === 1 ? 'Student' : 'Students';
@@ -148,7 +148,7 @@ export const sendAbstractEmails = async (
       ]) +
       h2('Description') +
       p(esc(data.projectDescription)) +
-      `<div style="margin-top:8px;">${button(data.viewUrl, 'View file')}${button(ADMIN_DASHBOARD_URL, 'Open dashboard')}</div>`,
+      `<div style="margin-top:8px;">${button(`${ADMIN_DASHBOARD_URL}/abstracts/${data.abstractId}`, 'Review submission')}</div>`,
     { footer: 'Automated science fair notification' }
   );
 

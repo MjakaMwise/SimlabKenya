@@ -3,7 +3,7 @@ import { z } from 'zod';
 import pool from '../config/postgres.js';
 import { can } from '../services/permissions.js';
 import { isShopEnabled } from '../services/settings.js';
-import { uploadToCloudinary } from '../services/cloudinaryService.js';
+import { saveUpload } from '../services/fileStorage.js';
 
 const productSchema = z.object({
   name: z.string().min(1),
@@ -100,17 +100,18 @@ export const deleteProduct = async (req: Request, res: Response) => {
   res.status(204).send();
 };
 
-// POST /api/products/upload-image — shop managers. Returns the hosted URLs of the uploaded pictures.
+// POST /api/products/upload-image — shop managers. Returns the public URLs of the uploaded pictures.
 export const uploadProductImages = async (req: Request, res: Response) => {
   const files = (req.files as Express.Multer.File[]) ?? [];
   if (!files.length) return res.status(400).json({ error: 'Choose at least one image' });
-  const bad = files.find((f) => !f.mimetype.startsWith('image/'));
-  if (bad) return res.status(400).json({ error: `"${bad.originalname}" is not an image` });
+  // Pictures are served from our own origin, so only accept real image extensions (never .svg or .html).
+  const bad = files.find((f) => !f.mimetype.startsWith('image/') || !/\.(jpe?g|png|webp|gif|avif)$/i.test(f.originalname));
+  if (bad) return res.status(400).json({ error: `"${bad.originalname}" is not a JPG, PNG, WebP, GIF or AVIF image` });
   try {
-    const urls = await Promise.all(files.map(async (f) => (await uploadToCloudinary(f.buffer, f.originalname, 'simlab-shop')).secure_url));
+    const urls = await Promise.all(files.map(async (f) => `/api/uploads/shop/${await saveUpload('shop', f.buffer, f.originalname)}`));
     res.status(201).json({ urls });
   } catch (err) {
     console.error('[Shop] image upload error:', err);
-    res.status(500).json({ error: 'Image upload failed. Check the Cloudinary settings and try again.' });
+    res.status(500).json({ error: 'Image upload failed. Please try again.' });
   }
 };

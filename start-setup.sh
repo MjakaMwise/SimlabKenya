@@ -11,8 +11,8 @@
 #                      default: Enter keeps them), validate. Existing values are never overwritten silently
 #   5. Pre-deploy checks  compose file, ports, DNS, SQL files, image build
 #   6. Deploy          database -> schema -> first admin -> api + web
-#   7. Post-deploy checks  containers healthy, API, tables, admin, Gmail login + test email, HTTPS site
-#   8. Backups         daily Postgres backup cron
+#   7. Post-deploy checks  containers healthy, API, tables, admin, Resend key + test email, HTTPS site
+#   8. Backups         daily backup cron (Postgres + the uploads volume)
 #
 # Options:
 #   --verify-only     run steps 1 and 4-5 checks only; change nothing
@@ -20,7 +20,7 @@
 #   --skip-firewall   do not touch ufw
 #   --skip-dns-check  do not fail/warn when the domain does not point at this server
 #   --skip-cron       do not install the backup cron job
-#   --skip-email-check  do not verify the Gmail login / send the test email
+#   --skip-email-check  do not verify the Resend key / send the test email
 #   -h, --help        show this help
 set -Eeuo pipefail
 
@@ -212,9 +212,6 @@ done
 JWT="$(env_get JWT_SECRET)"
 [ "${#JWT}" -ge 32 ] || die "JWT_SECRET must be at least 32 characters."
 case "$(env_get POSTGRES_PASSWORD)" in change-me*) die "POSTGRES_PASSWORD is still the placeholder." ;; esac
-if [ -z "$(env_get FIREBASE_PROJECT_ID)" ] || [ -z "$(env_get CLOUDINARY_CLOUD_NAME)" ]; then
-  warn "Firebase/Cloudinary values are empty: abstract submissions will not work until they are set in .env."
-fi
 ok ".env validated (permissions 600)"
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -330,6 +327,8 @@ db_scalar() { psql_db -At -c "$1"; }
 registrations_table() { [ "$(db_scalar "SELECT to_regclass('public.ocean_shujaa_registrations') IS NOT NULL")" = t ]; }
 shop_ready() { [ "$(db_scalar "SELECT to_regclass('public.orders') IS NOT NULL AND (SELECT count(*) FROM products) >= 0")" = t ]; }
 has_admin() { [ "$(db_scalar 'SELECT count(*) FROM admin_users')" -ge 1 ]; }
+abstracts_tables() { [ "$(db_scalar "SELECT to_regclass('public.abstracts') IS NOT NULL AND to_regclass('public.abstract_files') IS NOT NULL")" = t ]; }
+uploads_writable() { dc exec -T api sh -c 'touch /data/uploads/.write-test && rm /data/uploads/.write-test'; }
 postgres_private() { ! ss -ltn | grep -q ':5432 '; }
 
 info "Waiting for the API (up to 90s)..."
@@ -341,15 +340,19 @@ check "shop tables exist and catalogue is seeded"   shop_ready
 check "an admin account exists"                     has_admin
 check "public registration rejects bad input (400)" api_status POST /api/ocean-shujaa/registrations 400
 check "admin API refuses anonymous requests (401)"  api_status GET /api/ocean-shujaa/admin/registrations 401
+check "abstract tables exist"                       abstracts_tables
+check "uploads volume is writable by the API"       uploads_writable
+check "public abstract form rejects bad input (400)" api_status POST /api/abstracts 400
+check "abstract list refuses anonymous requests (401)" api_status GET /api/abstracts 401
 check "Postgres is not exposed on the host"         postgres_private
 
 # Email: admin login codes depend on it, so prove it works instead of finding out at first login.
 if [ "$SKIP_EMAIL" -eq 1 ]; then
   info "Email check skipped (--skip-email-check)"
 else
-  info "Verifying the Gmail login..."
+  info "Verifying the Resend key..."
   if dc exec -T api npx tsx server/scripts/test-email.ts; then
-    ok "Gmail login works"
+    ok "Resend key works"
     TO="${ADMIN_BOOTSTRAP_EMAIL:-$(env_get ADMIN_BOOTSTRAP_EMAIL)}"; TO="${TO:-$(env_get ADMIN_EMAIL)}"
     if interactive; then
       read -r -p "  Send a real test email to [${TO}] (type another address, 'n' to skip): " ANS
@@ -395,7 +398,7 @@ else
     ok "Backup cron already installed"
   else
     ( crontab -l 2>/dev/null || true; echo "$CRON_LINE" ) | crontab -
-    ok "Daily 02:00 backup installed (keeps 14, in $ROOT/backups)"
+    ok "Daily 02:00 backup of Postgres and uploads installed (keeps 14 of each, in $ROOT/backups)"
   fi
   warn "Backups live on this server. Copy $ROOT/backups off the VPS regularly."
 fi

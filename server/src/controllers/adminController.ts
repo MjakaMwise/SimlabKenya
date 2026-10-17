@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import pool from '../config/postgres.js';
 import { sendOTPEmail, sendTestEmail, verifyEmailTransport, explainEmailError } from '../services/emailService.js';
-import { getAbstractsFromFirestore } from '../services/firebaseService.js';
+import { countAbstractsByStatus } from '../services/abstractService.js';
 import { can } from '../services/permissions.js';
 import {
   hashPassword, verifyPassword, generateOtp, hashOtp, signToken,
@@ -101,7 +101,7 @@ export const changePassword = async (req: Request, res: Response) => {
   res.json({ success: true });
 };
 
-// POST /api/admin/test-email — admin only. Verifies the SMTP login, then sends a real message to the admin.
+// POST /api/admin/test-email — admin only. Verifies the Resend key, then sends a real message to the admin.
 export const testEmail = async (req: Request, res: Response) => {
   try {
     await verifyEmailTransport();
@@ -132,13 +132,13 @@ export const getStats = async (req: Request, res: Response) => {
         COALESCE(sum(total_amount) FILTER (WHERE payment_status = 'paid'), 0) AS "totalRevenue"
       FROM orders`),
     canOrders ? pool.query('SELECT * FROM orders ORDER BY created_at DESC LIMIT 10') : { rows: [] },
-    canAbstracts ? getAbstractsFromFirestore().catch(() => [] as { status?: string }[]) : [],
+    canAbstracts ? countAbstractsByStatus() : { total: 0, pending: 0 },
   ]);
 
   res.json({
     ...totals.rows[0],
-    totalAbstracts: abstracts.length,
-    pendingAbstracts: abstracts.filter((a) => (a as { status?: string }).status === 'pending').length,
+    totalAbstracts: abstracts.total,
+    pendingAbstracts: abstracts.pending,
     recentOrders: recent.rows,
   });
 };

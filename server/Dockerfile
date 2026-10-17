@@ -9,6 +9,9 @@ RUN npm ci --no-audit --no-fund --ignore-scripts
 COPY server ./server
 COPY tsconfig.json tsconfig.server.json ./
 
+# Named volumes inherit this ownership on first use, so the unprivileged user can write uploads.
+RUN mkdir -p /data/uploads && chown node:node /data/uploads
+
 USER node
 EXPOSE 5000
 CMD ["npx", "tsx", "server/index.ts"]

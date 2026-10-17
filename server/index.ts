@@ -17,5 +17,5 @@ app.listen(PORT, () => {
 
 // Fail loudly in the logs if outgoing email is broken: admin login codes depend on it.
 verifyEmailTransport()
-  .then(() => console.log('[Email] SMTP login verified'))
+  .then(() => console.log('[Email] Resend key verified'))
   .catch((err) => console.error(`[Email] NOT WORKING — admin login codes and order emails will fail. ${explainEmailError(err)}`));
