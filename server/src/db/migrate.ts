@@ -20,6 +20,31 @@ const STATEMENTS = [
    )`,
   // The shop starts switched off; an admin turns it on from Admin > Products.
   `INSERT INTO site_settings (key, value) VALUES ('shop_enabled', 'false'::jsonb) ON CONFLICT (key) DO NOTHING`,
+  // Abstract submissions and their files (previously in Firestore and Cloudinary).
+  `CREATE TABLE IF NOT EXISTS abstracts (
+     id                  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     school_name         TEXT NOT NULL,
+     student_names       TEXT[] NOT NULL,
+     teacher_name        TEXT NOT NULL,
+     teacher_email       TEXT NOT NULL,
+     teacher_contact     TEXT NOT NULL,
+     project_title       TEXT NOT NULL,
+     project_description TEXT NOT NULL,
+     project_category    TEXT NOT NULL,
+     status              TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','reviewed','accepted','rejected')),
+     submitted_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+     updated_at          TIMESTAMPTZ
+   )`,
+  `CREATE TABLE IF NOT EXISTS abstract_files (
+     id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     abstract_id   UUID NOT NULL REFERENCES abstracts(id) ON DELETE CASCADE,
+     original_name TEXT NOT NULL,
+     stored_name   TEXT NOT NULL,
+     mime_type     TEXT NOT NULL,
+     size          INTEGER NOT NULL,
+     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
+  `CREATE INDEX IF NOT EXISTS abstract_files_abstract_idx ON abstract_files (abstract_id)`,
 ];
 
 export const migrate = async (): Promise<void> => {

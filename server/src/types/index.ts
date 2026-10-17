@@ -86,8 +86,7 @@ export interface AbstractSubmission {
 
 export interface UploadedAbstractFile {
   originalName: string;
-  cloudinaryUrl: string;
-  cloudinaryPublicId: string;
+  storedName: string;
   mimeType: string;
   size: number;
 }

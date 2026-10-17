@@ -12,7 +12,6 @@ export interface AbstractPreview {
   description?: string;
   fileType?: "pdf" | "docx";
   viewUrl?: string;
-  downloadUrl?: string;
   fileName?: string;
   fileSize?: number;
   submittedAt?: string;
@@ -23,6 +22,7 @@ export interface AbstractPreview {
 
 interface FilePreviewModalProps {
   abstract: AbstractPreview;
+  token: string | null; // files are only served to signed-in staff, so they are fetched with the session token
   onClose: () => void;
 }
 
@@ -39,8 +39,9 @@ function formatSize(bytes?: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export default function FilePreviewModal({ abstract, onClose }: FilePreviewModalProps) {
+export default function FilePreviewModal({ abstract, token, onClose }: FilePreviewModalProps) {
   const [loading, setLoading]   = useState(true);
+  const [blobUrl, setBlobUrl]   = useState<string | null>(null);
   const [docxHtml, setDocxHtml] = useState<string | null>(null);
   const [error, setError]       = useState<string | null>(null);
 
@@ -48,27 +49,36 @@ export default function FilePreviewModal({ abstract, onClose }: FilePreviewModal
   const isDocx = abstract.fileType === "docx";
 
   useEffect(() => {
-    if (isDocx && abstract.viewUrl) {
-      convertDocx();
-    } else {
+    if (!abstract.viewUrl) {
       setLoading(false);
+      return;
     }
-  }, []);
-
-  async function convertDocx() {
-    try {
-      setLoading(true);
-      const mammoth = await import("mammoth");
-      const res = await fetch(abstract.viewUrl!);
-      const arrayBuffer = await res.arrayBuffer();
-      const result = await mammoth.convertToHtml({ arrayBuffer });
-      setDocxHtml(result.value);
-    } catch {
-      setError("Could not load document preview");
-    } finally {
-      setLoading(false);
-    }
-  }
+    let url: string | null = null;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(abstract.viewUrl!, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) throw new Error(String(res.status));
+        const blob = await res.blob();
+        if (cancelled) return;
+        url = URL.createObjectURL(blob);
+        setBlobUrl(url);
+        if (isDocx) {
+          const mammoth = await import("mammoth");
+          const result = await mammoth.convertToHtml({ arrayBuffer: await blob.arrayBuffer() });
+          if (!cancelled) setDocxHtml(result.value);
+        }
+      } catch {
+        if (!cancelled) setError(isPdf ? "PDF preview unavailable" : "Could not load document preview");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [abstract.viewUrl, token]);
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -114,16 +124,16 @@ export default function FilePreviewModal({ abstract, onClose }: FilePreviewModal
             </TabsList>
 
             <div className="ml-auto flex items-center gap-2 px-2 py-1.5">
-              {abstract.viewUrl && (
+              {blobUrl && (
                 <Button variant="outline" size="sm" asChild>
-                  <a href={abstract.viewUrl} target="_blank" rel="noreferrer">
+                  <a href={blobUrl} target="_blank" rel="noreferrer">
                     <ExternalLink className="w-3.5 h-3.5 mr-1" /> Open
                   </a>
                 </Button>
               )}
-              {abstract.downloadUrl && (
+              {blobUrl && (
                 <Button variant="outline" size="sm" asChild>
-                  <a href={abstract.downloadUrl} download={abstract.fileName}>
+                  <a href={blobUrl} download={abstract.fileName}>
                     <Download className="w-3.5 h-3.5 mr-1" /> Download
                   </a>
                 </Button>
@@ -147,17 +157,12 @@ export default function FilePreviewModal({ abstract, onClose }: FilePreviewModal
               <div className="flex flex-col items-center justify-center flex-1 gap-3">
                 <AlertCircle className="w-8 h-8 text-destructive" />
                 <p className="text-destructive">{error}</p>
-                <Button variant="outline" size="sm" asChild>
-                  <a href={abstract.viewUrl} target="_blank" rel="noreferrer">Open in new tab</a>
-                </Button>
               </div>
             ) : isPdf ? (
               <iframe
-                src={`${abstract.viewUrl}#toolbar=0`}
+                src={`${blobUrl}#toolbar=0`}
                 className="flex-1 w-full border-none"
                 title={abstract.title}
-                onLoad={() => setLoading(false)}
-                onError={() => { setError("PDF preview unavailable"); setLoading(false); }}
               />
             ) : isDocx && docxHtml ? (
               <div className="flex-1 overflow-auto">

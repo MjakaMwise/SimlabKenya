@@ -1,12 +1,9 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { uploadToCloudinary } from '../services/cloudinaryService.js';
-import {
-  saveAbstractToFirestore,
-  getAbstractsFromFirestore,
-  getAbstractFromFirestore,
-  updateAbstractStatusInFirestore,
-} from '../services/firebaseService.js';
+import { createReadStream } from 'fs';
+import { access } from 'fs/promises';
+import { saveUpload, resolveUpload } from '../services/fileStorage.js';
+import * as abstractDb from '../services/abstractService.js';
 import { sendAbstractEmails, sendAbstractStatusEmail } from '../services/emailService.js';
 import { AbstractSubmission, UploadedAbstractFile } from '../types/index.js';
 
@@ -64,49 +61,42 @@ export const submitAbstract = async (req: Request, res: Response) => {
     }
   }
 
-  // Upload all files to Cloudinary
+  // Save the files to the VPS disk, then the record to Postgres
   const submission = parsed.data as AbstractSubmission;
 
   let uploadedFiles: UploadedAbstractFile[];
   try {
     uploadedFiles = await Promise.all(
-      files.map(async (file): Promise<UploadedAbstractFile> => {
-        const result = await uploadToCloudinary(file.buffer, file.originalname);
-        return {
-          originalName: file.originalname,
-          cloudinaryUrl: result.secure_url,
-          cloudinaryPublicId: result.public_id,
-          mimeType: file.mimetype,
-          size: file.size,
-        };
-      })
+      files.map(async (file): Promise<UploadedAbstractFile> => ({
+        originalName: file.originalname,
+        storedName: await saveUpload('abstracts', file.buffer, file.originalname),
+        mimeType: file.mimetype,
+        size: file.size,
+      }))
     );
   } catch (err) {
-    console.error('[Abstract] Cloudinary upload error:', err);
-    return res.status(500).json({ error: 'Failed to upload files. Please try again.' });
+    console.error('[Abstract] File save error:', err);
+    return res.status(500).json({ error: 'Failed to store files. Please try again.' });
   }
 
-  // Save to Firebase Firestore
-  let docRef;
+  let saved;
   try {
-    docRef = await saveAbstractToFirestore(submission, uploadedFiles);
+    saved = await abstractDb.saveAbstract(submission, uploadedFiles);
   } catch (err) {
-    console.error('[Abstract] Firestore save error:', err);
+    console.error('[Abstract] Database save error:', err);
     return res.status(500).json({ error: 'Failed to save submission. Please try again.' });
   }
 
   // Send email notifications in background
-  const primaryFile = uploadedFiles[0];
   sendAbstractEmails({
     ...submission,
-    fileName: primaryFile.originalName,
-    viewUrl: primaryFile.cloudinaryUrl,
+    fileName: uploadedFiles[0].originalName,
+    abstractId: saved.id,
   }).catch((err) => console.error('[Abstract emails] Failed to send:', err.message));
-
 
   res.status(201).json({
     success: true,
-    submissionId: docRef.id,
+    submissionId: saved.id,
     message: 'Abstract submitted successfully. You will receive a confirmation email shortly.',
     filesUploaded: uploadedFiles.length,
   });
@@ -115,7 +105,7 @@ export const submitAbstract = async (req: Request, res: Response) => {
 // GET /api/abstracts — admin only
 export const listAbstracts = async (_req: Request, res: Response) => {
   try {
-    const abstracts = await getAbstractsFromFirestore();
+    const abstracts = await abstractDb.listAbstracts();
     res.json(abstracts);
   } catch (err) {
     console.error('[Abstracts] List error:', err);
@@ -126,7 +116,7 @@ export const listAbstracts = async (_req: Request, res: Response) => {
 // GET /api/abstracts/:id — admin only
 export const getAbstract = async (req: Request, res: Response) => {
   try {
-    const abstract = await getAbstractFromFirestore(String(req.params.id));
+    const abstract = await abstractDb.getAbstract(String(req.params.id));
     if (!abstract) return res.status(404).json({ error: 'Abstract not found' });
     res.json(abstract);
   } catch (err) {
@@ -143,10 +133,9 @@ export const updateAbstractStatus = async (req: Request, res: Response) => {
     return res.status(400).json({ error: `Status must be one of: ${allowed.join(', ')}` });
   }
   try {
-    const [abstract] = await Promise.all([
-      getAbstractFromFirestore(String(req.params.id)),
-      updateAbstractStatusInFirestore(String(req.params.id), status),
-    ]);
+    const id = String(req.params.id);
+    if (!(await abstractDb.updateAbstractStatus(id, status))) return res.status(404).json({ error: 'Abstract not found' });
+    const abstract = await abstractDb.getAbstract(id);
 
     if (abstract) {
       const a = abstract as Record<string, unknown>;
@@ -168,5 +157,22 @@ export const updateAbstractStatus = async (req: Request, res: Response) => {
   } catch (err) {
     console.error('[Abstracts] Status update error:', err);
     res.status(500).json({ error: 'Failed to update status' });
+  }
+};
+
+// GET /api/abstracts/:id/files/:fileId — admin or delegated staff; streams the stored file
+export const downloadAbstractFile = async (req: Request, res: Response) => {
+  try {
+    const file = await abstractDb.getAbstractFile(String(req.params.id), String(req.params.fileId));
+    const filePath = file && resolveUpload('abstracts', file.storedName);
+    if (!file || !filePath) return res.status(404).json({ error: 'File not found' });
+    await access(filePath);
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(file.originalName)}`);
+    createReadStream(filePath).pipe(res);
+  } catch (err) {
+    console.error('[Abstracts] File error:', err);
+    res.status(404).json({ error: 'File not found' });
   }
 };
