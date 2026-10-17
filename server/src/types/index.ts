@@ -107,6 +107,7 @@ export interface ApiError {
 
 // Extend Express Request to include authenticated user
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- standard way to augment Express.Request
   namespace Express {
     interface Request {
       user?: {

@@ -87,7 +87,7 @@ const Abstract = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^[\d\s\+\-\(\)]{7,15}$/;
+    const phoneRegex = /^[\d\s+\-()]{7,15}$/;
 
     const filledStudents = studentNames.map((s) => s.trim()).filter(Boolean);
     if (
