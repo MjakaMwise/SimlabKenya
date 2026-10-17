@@ -19,10 +19,10 @@ The script is safe to re-run; finished steps are skipped. It:
 4. **Configures `.env`** – copies `.env.example` (existing `.env` values are the prompt defaults: Enter keeps them, typing changes them; nothing is overwritten silently), generates missing `POSTGRES_PASSWORD` and `JWT_SECRET`, asks for the domain and Gmail values, validates them, sets mode 600.
 5. **Verifies before deploying** – project files, `docker compose config`, ports 80/443 free, DNS points at this server, then builds the images.
 6. **Deploys** – starts Postgres, applies `db/init/*.sql`, creates the first admin, starts API + web.
-7. **Verifies after deploying** – API health, tables exist, an admin exists, public form validates input, admin routes reject anonymous requests, Postgres not exposed, HTTPS site responds.
+7. **Verifies after deploying** – API health, tables exist, an admin exists, **Gmail login works and (optionally) a real test email is delivered**, public form validates input, admin routes reject anonymous requests, Postgres not exposed, HTTPS site responds.
 8. **Installs a daily backup cron** (02:00, keeps 14).
 
-Options: `--verify-only` (checks, changes nothing), `--yes` (no prompts; put values in `.env` or the environment), `--skip-firewall`, `--skip-dns-check`, `--skip-cron`.
+Options: `--skip-email-check`, `--verify-only` (checks, changes nothing), `--yes` (no prompts; put values in `.env` or the environment), `--skip-firewall`, `--skip-dns-check`, `--skip-cron`.
 
 For unattended runs set `ADMIN_BOOTSTRAP_EMAIL` and `ADMIN_BOOTSTRAP_PASSWORD` in `.env`; the script removes the password from `.env` after creating the account.
 
@@ -34,6 +34,18 @@ Admin accounts live in the VPS Postgres (`admin_users`), on the VPS. Signing in 
 # create another admin, or reset a password
 docker compose run --rm api npx tsx server/scripts/create-admin.ts
 ```
+
+### Checking that email works
+
+Admin login codes and order emails go through Gmail. Three ways to verify:
+
+```bash
+./deploy/test-email.sh                  # checks the Gmail login only
+./deploy/test-email.sh you@example.com  # also sends a real test message
+docker compose logs api | grep "\[Email\]"   # the API checks the login at every start
+```
+
+Admin → Settings → Notifications also has a **Send test email** button. Failures say why (wrong app password, or the VPS blocking outbound port 465). `GMAIL_APP_PASSWORD` must be a Google App Password (requires 2-Step Verification), not the normal password.
 
 ### Forgot the admin password / lock-out
 
@@ -103,7 +115,7 @@ Copy `backups/` off the server regularly (e.g. `rsync` to another machine).
 | `/api/...` returns 502 | `docker compose logs api` — missing `.env` values (e.g. `JWT_SECRET` or `GMAIL_*` missing) |
 | API cannot reach DB | `docker compose logs db`; confirm `POSTGRES_PASSWORD` was not changed after the volume was created (the volume keeps the original password) |
 | Firebase errors | `FIREBASE_PRIVATE_KEY` must be on one line with literal `\n` sequences |
-| Admin login says "Failed to send verification code" | Gmail settings: check `GMAIL_USER` / `GMAIL_APP_PASSWORD` and `docker compose logs api` |
+| Admin login says "Failed to send verification code" | Run `./deploy/test-email.sh`; Gmail settings: check `GMAIL_USER` / `GMAIL_APP_PASSWORD` and `docker compose logs api` |
 | API exits at start with JWT_SECRET error | Set `JWT_SECRET` (32+ chars) in `.env` |
 
 ## 7. After cut-over

@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const AdminSettings = () => {
     const { user, token } = useAdminAuth();
+    const [isTestingEmail, setIsTestingEmail] = useState(false);
     const { toast } = useToast();
     const [isChangingPassword, setIsChangingPassword] = useState(false);
     const [passwordData, setPasswordData] = useState({
@@ -67,6 +68,27 @@ const AdminSettings = () => {
             });
         } finally {
             setIsChangingPassword(false);
+        }
+    };
+
+    const handleTestEmail = async () => {
+        setIsTestingEmail(true);
+        try {
+            const res = await fetch("/api/admin/test-email", {
+                method: "POST",
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || "Email test failed");
+            toast({ title: "Test email sent", description: `Check the inbox of ${data.sentTo} (and spam).` });
+        } catch (error) {
+            toast({
+                title: "Email is not working",
+                description: error instanceof Error ? error.message : "Email test failed",
+                variant: "destructive",
+            });
+        } finally {
+            setIsTestingEmail(false);
         }
     };
 
@@ -197,6 +219,17 @@ const AdminSettings = () => {
                                 </p>
                             </div>
                             <Switch checked={true} disabled />
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <p className="font-medium">Email delivery check</p>
+                                <p className="text-sm text-muted-foreground">
+                                    Verifies the server's email login and sends a test message to {user?.email}
+                                </p>
+                            </div>
+                            <Button variant="outline" onClick={handleTestEmail} disabled={isTestingEmail}>
+                                {isTestingEmail ? <><Loader2 className="w-4 h-4 animate-spin" /> Testing...</> : "Send test email"}
+                            </Button>
                         </div>
                         <div className="flex items-center justify-between opacity-70">
                             <div>
