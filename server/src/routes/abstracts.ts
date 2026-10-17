@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requirePermission } from '../middleware/auth.js';
 import {
   submitAbstract,
   listAbstracts,
@@ -18,9 +18,9 @@ const router = Router();
 // Public
 router.post('/', upload.array('files', 10), submitAbstract);
 
-// Admin only
-router.get('/', requireAuth, requireAdmin, listAbstracts);
-router.get('/:id', requireAuth, requireAdmin, getAbstract);
-router.patch('/:id/status', requireAuth, requireAdmin, updateAbstractStatus);
+// Admin or delegated staff
+router.get('/', requireAuth, requirePermission('abstracts', 'view'), listAbstracts);
+router.get('/:id', requireAuth, requirePermission('abstracts', 'view'), getAbstract);
+router.patch('/:id/status', requireAuth, requirePermission('abstracts', 'manage'), updateAbstractStatus);
 
 export default router;

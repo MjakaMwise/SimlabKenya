@@ -1,7 +1,10 @@
 import app from './src/app.js';
+import { migrate } from './src/db/migrate.js';
 import { verifyEmailTransport, explainEmailError } from './src/services/emailService.js';
 
 const PORT = Number(process.env.PORT) || 5000;
+
+await migrate();
 
 app.listen(PORT, () => {
   console.log(`SIM-Lab Kenya API server running on http://localhost:${PORT}`);

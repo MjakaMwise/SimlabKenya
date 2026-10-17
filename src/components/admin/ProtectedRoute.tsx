@@ -1,14 +1,19 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, Area } from "@/hooks/useAdminAuth";
 import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
     children: ReactNode;
+    /** Require view access to this area (staff need it delegated; administrators always pass). */
+    area?: Area;
+    /** Administrators only. */
+    adminOnly?: boolean;
 }
 
-const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-    const { user, isLoading, isAdmin, isMfaVerified } = useAdminAuth();
+const ProtectedRoute = ({ children, area, adminOnly }: ProtectedRouteProps) => {
+    const { user, isLoading, isAdmin, isMfaVerified, isFullAdmin, can } = useAdminAuth();
+    const allowed = adminOnly ? isFullAdmin : area ? can(area, "view") : true;
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -19,9 +24,11 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
                 navigate("/admin/login?error=unauthorized");
             } else if (!isMfaVerified) {
                 navigate("/admin/login?mfa=required");
+            } else if (!allowed) {
+                navigate("/admin/settings", { replace: true });
             }
         }
-    }, [user, isLoading, isAdmin, isMfaVerified, navigate]);
+    }, [user, isLoading, isAdmin, isMfaVerified, allowed, navigate]);
 
     if (isLoading) {
         return (
@@ -34,7 +41,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
         );
     }
 
-    if (!user || !isAdmin || !isMfaVerified) {
+    if (!user || !isAdmin || !isMfaVerified || !allowed) {
         return null;
     }
 

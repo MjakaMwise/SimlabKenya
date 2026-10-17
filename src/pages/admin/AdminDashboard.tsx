@@ -68,10 +68,11 @@ const AdminDashboard = () => {
             if (!res.ok) throw new Error("Failed to fetch stats");
             const data = await res.json();
             setStats({
-                totalOrders: data.totalOrders,
-                pendingOrders: data.pendingOrders,
-                completedOrders: data.completedOrders,
-                totalRevenue: data.totalRevenue,
+                // Staff only receive the figures for areas delegated to them.
+                totalOrders: data.totalOrders ?? 0,
+                pendingOrders: data.pendingOrders ?? 0,
+                completedOrders: data.completedOrders ?? 0,
+                totalRevenue: data.totalRevenue ?? 0,
                 totalAbstracts: data.totalAbstracts ?? 0,
                 pendingAbstracts: data.pendingAbstracts ?? 0,
             });

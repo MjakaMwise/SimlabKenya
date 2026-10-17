@@ -12,17 +12,20 @@ import {
     Menu,
     X,
     ChevronDown,
+    Users,
 } from "lucide-react";
-import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useAdminAuth, Area } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import logo from "@/assets/logo.jpeg";
 
-const navItems = [
+type NavItem = { label: string; href: string; icon: typeof Users; area?: Area; adminOnly?: boolean };
+const navItems: NavItem[] = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Orders", href: "/admin/orders", icon: ShoppingCart },
-    { label: "Products", href: "/admin/products", icon: Package },
-    { label: "Abstracts", href: "/admin/abstracts", icon: FileText },
-    { label: "Ocean Shujaa", href: "/admin/ocean-shujaa", icon: Waves },
+    { label: "Orders", href: "/admin/orders", icon: ShoppingCart, area: "orders" },
+    { label: "Products", href: "/admin/products", icon: Package, area: "shop" },
+    { label: "Abstracts", href: "/admin/abstracts", icon: FileText, area: "abstracts" },
+    { label: "Ocean Shujaa", href: "/admin/ocean-shujaa", icon: Waves, adminOnly: true },
+    { label: "Staff", href: "/admin/staff", icon: Users, adminOnly: true },
     { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
@@ -33,7 +36,8 @@ interface AdminLayoutProps {
 const AdminLayout = ({ children }: AdminLayoutProps) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
-    const { user, signOut } = useAdminAuth();
+    const { user, signOut, isFullAdmin, can } = useAdminAuth();
+    const visibleNav = navItems.filter((i) => (i.adminOnly ? isFullAdmin : i.area ? can(i.area, "view") : true));
     const location = useLocation();
 
     const handleSignOut = async () => {
@@ -123,7 +127,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                 </div>
 
                 <nav className="p-4 space-y-1">
-                    {navItems.map((item) => {
+                    {visibleNav.map((item) => {
                         const isActive =
                             item.href === "/admin"
                                 ? location.pathname === "/admin"
@@ -153,7 +157,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                         </div>
                         <div className="flex-1 min-w-0">
                             <p className="font-medium truncate text-sm">{user?.email}</p>
-                            <p className="text-xs text-muted-foreground">Administrator</p>
+                            <p className="text-xs text-muted-foreground">{isFullAdmin ? "Administrator" : "Staff"}</p>
                         </div>
                     </div>
                     <Button
