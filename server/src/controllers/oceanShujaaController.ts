@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import pool from '../config/postgres.js';
+import { postEvent } from '../services/chat.js';
 import { sendOceanShujaaRegistrationEmail, sendOceanShujaaStatusEmail } from '../services/emailService.js';
 
 const LEVELS = ['primary', 'junior_secondary', 'senior_secondary', 'college', 'group', 'other'] as const;
@@ -43,14 +44,17 @@ export const createRegistration = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Validation failed', details });
   }
   const d = parsed.data;
-  await pool.query(
+  const { rows: created } = await pool.query(
     `INSERT INTO ocean_shujaa_registrations
        (participant_name, participant_age, level, institution, guardian_name,
         guardian_phone, guardian_email, group_size, notes)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
     [d.participantName, d.participantAge ?? null, d.level, d.institution, d.guardianName,
      d.guardianPhone, d.guardianEmail, d.groupSize, d.notes || null]
   );
+  postEvent('ocean-shujaa',
+    `New registration: ${d.participantName}, ${d.institution} (${d.groupSize} ${d.groupSize === 1 ? 'participant' : 'participants'})`,
+    { type: 'registration', id: created[0].id, label: d.participantName });
   // Email failures must not fail a registration that is already saved.
   sendOceanShujaaRegistrationEmail({
     participantName: d.participantName, level: d.level, institution: d.institution,
