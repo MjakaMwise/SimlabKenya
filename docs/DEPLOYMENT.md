@@ -16,7 +16,7 @@ The script is safe to re-run; finished steps are skipped. It:
 1. **Preflight** – OS, sudo, disk (≥5 GB), memory.
 2. **Installs what is missing** – git, curl, openssl, ufw, Docker Engine and the compose plugin.
 3. **Firewall** – allows SSH (first, so you are never locked out), 80 and 443 only.
-4. **Configures `.env`** – copies `.env.example` (existing `.env` values are the prompt defaults: Enter keeps them, typing changes them; nothing is overwritten silently), generates missing `POSTGRES_PASSWORD` and `JWT_SECRET`, asks for the domain and Resend values, validates them, sets mode 600.
+4. **Configures `.env`** – copies `.env.example` (existing `.env` values are the prompt defaults: Enter keeps them, typing changes them; nothing is overwritten silently), generates missing `POSTGRES_PASSWORD` and `JWT_SECRET` (and, after the image build, the `VAPID_*` keys that Team Desk push notifications need; existing keys are never replaced), asks for the domain and Resend values, validates them, sets mode 600.
 5. **Verifies before deploying** – project files, `docker compose config`, ports 80/443 free, DNS points at this server, then builds the images.
 6. **Deploys** – starts Postgres, applies `db/init/*.sql`, creates the first admin, starts API + web.
 7. **Verifies after deploying** – API health, tables exist, an admin exists, **the Resend key works and (optionally) a real test email is delivered**, public form validates input, admin routes reject anonymous requests, Postgres not exposed, HTTPS site responds.

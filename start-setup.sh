@@ -7,7 +7,7 @@
 #   1. Preflight       OS, privileges, disk, memory
 #   2. Install         git, curl, openssl, ufw, Docker Engine + compose plugin (only if missing)
 #   3. Firewall        allow SSH, 80, 443 (ufw)
-#   4. Configure       create .env, generate missing secrets, prompt (existing values are the
+#   4. Configure       create .env, generate missing secrets (database, login and push keys), prompt (existing values are the
 #                      default: Enter keeps them), validate. Existing values are never overwritten silently
 #   5. Pre-deploy checks  compose file, ports, DNS, SQL files, image build
 #   6. Deploy          database -> schema -> first admin -> api + web
@@ -269,6 +269,23 @@ info "Building images (first build takes a few minutes)..."
 dc build
 ok "Images built"
 
+# Team Desk push notifications need a VAPID key pair. Generated once with the web-push tool inside the
+# api image; existing keys are never replaced, because that would silently drop every registered device.
+json_field() { sed -n "s/.*\"$1\" *: *\"\([^\"]*\)\".*/\1/p" | head -1; }
+if [ -z "$(env_get VAPID_PUBLIC_KEY)" ] || [ -z "$(env_get VAPID_PRIVATE_KEY)" ]; then
+  VAPID_JSON="$(dc run --rm -T --no-deps api npx web-push generate-vapid-keys --json 2>/dev/null || true)"
+  VAPID_PUB="$(printf '%s' "$VAPID_JSON" | json_field publicKey)"
+  VAPID_PRIV="$(printf '%s' "$VAPID_JSON" | json_field privateKey)"
+  if [ -n "$VAPID_PUB" ] && [ -n "$VAPID_PRIV" ]; then
+    env_set VAPID_PUBLIC_KEY "$VAPID_PUB"
+    env_set VAPID_PRIVATE_KEY "$VAPID_PRIV"
+    ok "Generated VAPID keys for push notifications"
+  else
+    warn "Could not generate VAPID keys. Team Desk works, but without phone notifications. Fix, then re-run, or run: npx web-push generate-vapid-keys"
+  fi
+fi
+[ -n "$(env_get VAPID_SUBJECT)" ] || env_set VAPID_SUBJECT "mailto:$(env_get ADMIN_EMAIL)"
+
 # ══════════════════════════════════════════════════════════════════════════════
 step "Deploy"
 dc up -d db
@@ -345,6 +362,8 @@ check "uploads volume is writable by the API"       uploads_writable
 check "public abstract form rejects bad input (400)" api_status POST /api/abstracts 400
 check "abstract list refuses anonymous requests (401)" api_status GET /api/abstracts 401
 check "Postgres is not exposed on the host"         postgres_private
+push_keys_loaded() { dc exec -T api node -e "process.exit(process.env.VAPID_PUBLIC_KEY&&process.env.VAPID_PRIVATE_KEY?0:1)"; }
+if [ -n "$(env_get VAPID_PUBLIC_KEY)" ]; then check "push notification keys are loaded by the API" push_keys_loaded; fi
 
 # Email: admin login codes depend on it, so prove it works instead of finding out at first login.
 if [ "$SKIP_EMAIL" -eq 1 ]; then
