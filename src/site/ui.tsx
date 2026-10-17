@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { ReactNode } from "react";
 import { Icon } from "./Icon";
 import { IMG, wa, TEL, PHONE } from "./data";
+import { useSite } from "./SiteContext";
 
 export const Go = ({ to, children, cls = "go", arrow }: { to: string; children: ReactNode; cls?: string; arrow?: boolean }) => (
   <Link className={`btn ${cls}`} to={to}>
@@ -17,6 +18,15 @@ export const WaBtn = ({ text, label = "Chat on WhatsApp" }: { text?: string; lab
     {label}
   </a>
 );
+
+export const RegisterBtn = ({ label = "Register Now", cls = "go" }: { label?: string; cls?: string }) => {
+  const { openRegister } = useSite();
+  return (
+    <button type="button" className={`btn ${cls}`} onClick={openRegister}>
+      {label}
+    </button>
+  );
+};
 
 export const CallBtn = ({ label = PHONE }: { label?: string }) => (
   <a className="btn call" href={TEL}>

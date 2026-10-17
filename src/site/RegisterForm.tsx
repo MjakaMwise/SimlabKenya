@@ -39,7 +39,7 @@ const RegisterForm = () => {
       }
       setDone(true);
     } catch (err) {
-      toast(err instanceof Error ? err.message : "Could not send your registration. Try WhatsApp instead.");
+      toast(err instanceof Error ? err.message : "Could not send your registration. Please try again or call 0702 129 911.");
     } finally {
       setBusy(false);
     }

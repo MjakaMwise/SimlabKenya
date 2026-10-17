@@ -560,3 +560,13 @@
 .sl .reg-form{display:grid;gap:16px;max-width:760px}
 .sl .reg-form .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
 .sl .reg-ok{padding:22px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel2)}
+
+/* Registration modal */
+.sl #regmodal{position:fixed;inset:0;z-index:56;overflow:auto;display:flex;align-items:center;justify-content:center;padding:20px var(--gr) 20px var(--gl)}
+.sl .reg-card{width:min(720px,100%)}
+.sl .reg-head{padding:26px 64px 8px 28px}
+.sl .reg-head h3{font-size:clamp(1.15rem,3vw,1.45rem);font-weight:800;color:var(--head);margin-top:4px}
+.sl .reg-head p{color:var(--ink);opacity:.8;margin-top:6px;font-size:.95rem}
+.sl .reg-body{padding:16px 28px 28px}
+.sl .pclose{background:rgba(0,0,0,.28)}
+.sl .reg-card .pclose{background:var(--panel2);color:var(--ink)}
