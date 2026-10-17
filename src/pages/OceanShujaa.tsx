@@ -1,12 +1,10 @@
 import { useMemo } from "react";
 import { Icon } from "@/site/Icon";
-import { SectionHead, IconCards, CheckList, WaBtn } from "@/site/ui";
+import { SectionHead, IconCards, CheckList, RegisterBtn } from "@/site/ui";
 import { Timeline, TLItem } from "@/site/Timeline";
 import { objHtmlC } from "@/site/sci";
 import { IMG, EMAIL, OS_DAYS } from "@/site/data";
-import RegisterForm from "@/site/RegisterForm";
 
-const REG = "Hello SIM-Lab, I would like to register for the Ocean Shujaa holiday program.";
 const LABS: [string, string, string][] = [
   ["waves", "Environmental", "#2f7fd8"], ["bacteria", "Microbiology", "#d9568f"], ["fish", "Fisheries & marine biology", "#13a8c4"],
   ["flask", "Chemistry", "#8a63d2"], ["leaf", "Soil", "#2fa66a"], ["tag", "Food analysis", "#f08a24"], ["atom", "Advanced instrumental", "#5dade2"],
@@ -48,7 +46,7 @@ const OceanShujaa = () => {
             <div className="os-sub">From the Ocean to the Laboratory</div>
             <p className="lead2">Explore the wonders of our blue planet. Discover marine life, investigate ocean waters, explore mangrove forests, and uncover how science can protect our oceans and climate.</p>
             <div className="row">
-              <WaBtn text={REG} label="Register on WhatsApp" />
+              <RegisterBtn label="Register Now" />
               <a className="btn lt" href="tel:+254702129911"><Icon name="phone" />0702 129 911</a>
             </div>
             <div className="os-facts"><span>5 days</span><span>Primary to college</span><span>IOME001 Innovation Hub, Mombasa</span><span>Field + partner laboratories</span></div>
@@ -141,13 +139,6 @@ const OceanShujaa = () => {
         </div>
       </section>
 
-      <section className="sec alt" id="register">
-        <div className="wrap">
-          <SectionHead title="Register for Ocean Shujaa" lede="Fill in the form and we will contact you to confirm your place. You can also register on WhatsApp or by phone below." />
-          <RegisterForm />
-        </div>
-      </section>
-
       <section className="cta">
         <div className="hexbg" />
         <div className="wrap">
@@ -160,7 +151,7 @@ const OceanShujaa = () => {
           </div>
           <p>Students finish with presentations, reflection and an Ocean Shujaa certificate.</p>
           <div className="row">
-            <WaBtn text={REG} label="Register via WhatsApp" />
+            <RegisterBtn label="Register Now" />
             <a className="btn call" href="tel:+254702129911"><Icon name="phone" />Call 0702 129 911</a>
             <a className="btn lt" href={`mailto:${EMAIL}?subject=Ocean%20Shujaa%20Registration`}><Icon name="mail" />Email</a>
           </div>

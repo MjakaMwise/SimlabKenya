@@ -3,10 +3,11 @@ import { Link, Outlet, useLocation } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import "./site.css";
 import { Icon } from "./Icon";
-import { Go } from "./ui";
+import { RegisterBtn } from "./ui";
 import { NAV, IMG, EMAIL, PHONE, TEL, WEB, SOCIAL, wa } from "./data";
 import { SiteContext } from "./SiteContext";
 import { ProgramPopup, PopReq } from "./ProgramPopup";
+import RegisterModal from "./RegisterModal";
 import LoadingScreen from "./LoadingScreen";
 
 const HOME_TITLE = "SIM-Lab Kenya | Science in Motion - STEM Education & Innovation Lab";
@@ -54,6 +55,7 @@ export default function SiteLayout() {
   const [toastMsg, setToastMsg] = useState("");
   const [toastOn, setToastOn] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
+  const [regOpen, setRegOpen] = useState(false);
   const popId = useRef(0);
 
   const toast = useCallback((m: string) => {
@@ -65,7 +67,8 @@ export default function SiteLayout() {
   const openPop = useCallback((i: number, btn: HTMLElement | null, full: boolean) => {
     setPop({ i, btn, full, id: ++popId.current });
   }, []);
-  const ctx = useMemo(() => ({ openPop, toast }), [openPop, toast]);
+  const openRegister = useCallback(() => { setMenuOpen(false); setRegOpen(true); }, []);
+  const ctx = useMemo(() => ({ openPop, toast, openRegister }), [openPop, toast, openRegister]);
 
   // page title
   useEffect(() => {
@@ -77,6 +80,7 @@ export default function SiteLayout() {
   useEffect(() => {
     setMenuOpen(false);
     setPop(null);
+    setRegOpen(false);
     const target = hash && document.getElementById("w-" + hash.slice(1));
     if (target) target.scrollIntoView(); else window.scrollTo(0, 0);
   }, [pathname, hash]);
@@ -116,7 +120,7 @@ export default function SiteLayout() {
                 ))}
               </div>
               <div className="tools">
-                <Go to="/oceanshujaa">Register Now</Go>
+                <RegisterBtn />
                 <button className="ib" onClick={toggleTheme} aria-label="Toggle dark mode"><Icon name="moon" /></button>
                 <button className="ib" id="burger" onClick={() => setMenuOpen((o) => !o)} aria-label="Open menu" aria-expanded={menuOpen}><Icon name="menu" /></button>
               </div>
@@ -128,7 +132,7 @@ export default function SiteLayout() {
                   {f === 2 && <span className="new">NEW</span>}
                 </Link>
               ))}
-              <Go to="/oceanshujaa">Register Now</Go>
+              <RegisterBtn />
             </div>
           </div>
         </header>
@@ -174,6 +178,7 @@ export default function SiteLayout() {
           </div>
         </footer>
 
+        {regOpen && <RegisterModal onClose={() => setRegOpen(false)} />}
         {pop && <ProgramPopup key={pop.id} req={pop} onClosed={() => setPop(null)} />}
         <div id="toast" role="status" className={toastOn ? "show" : ""}>{toastMsg}</div>
       </div>
