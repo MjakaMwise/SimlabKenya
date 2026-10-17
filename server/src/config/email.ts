@@ -1,4 +1,5 @@
 // Outgoing email goes through Resend's HTTPS API (port 443), so it works on VPSes that block SMTP ports.
+import { Resend } from 'resend';
 
 export class ResendError extends Error {
   constructor(message: string, readonly status?: number, readonly code?: string) {
@@ -14,36 +15,34 @@ interface MailOptions {
   text?: string;
 }
 
-const resendFetch = async (path: string, init?: RequestInit): Promise<Response> => {
+const getClient = (): Resend => {
   const key = process.env.RESEND_API_KEY;
   if (!key) throw new ResendError('Missing email configuration: RESEND_API_KEY is required', undefined, 'ENOKEY');
-  return fetch(`https://api.resend.com${path}`, {
-    ...init,
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', ...init?.headers },
-  });
+  return new Resend(key);
 };
 
-export const createTransporter = () => ({
-  // Mirrors the nodemailer result shape the callers already use.
-  async sendMail(opts: MailOptions): Promise<{ messageId: string; accepted: string[]; rejected: string[] }> {
-    const to = Array.isArray(opts.to) ? opts.to : [opts.to];
-    const res = await resendFetch('/emails', { method: 'POST', body: JSON.stringify({ ...opts, to }) });
-    const body = (await res.json().catch(() => ({}))) as { id?: string; message?: string; name?: string };
-    if (!res.ok || !body.id) throw new ResendError(body.message ?? `Resend returned HTTP ${res.status}`, res.status, body.name);
-    return { messageId: body.id, accepted: to, rejected: [] };
-  },
+// The SDK returns { data, error } instead of throwing; turn errors back into exceptions.
+const toError = (e: { message: string; statusCode?: number | null; name?: string }) =>
+  new ResendError(e.message, e.statusCode ?? undefined, e.name);
 
-  // Cheap authenticated call; a restricted "sending access" key gets 401 here but is still valid for sending.
-  async verify(): Promise<void> {
-    const res = await resendFetch('/domains');
-    if (res.status === 401) {
-      const body = (await res.json().catch(() => ({}))) as { name?: string; message?: string };
-      if (body.name !== 'restricted_api_key') throw new ResendError(body.message ?? 'Invalid API key', 401, body.name);
-    } else if (!res.ok) {
-      throw new ResendError(`Resend returned HTTP ${res.status}`, res.status);
-    }
-  },
-});
+export const createTransporter = () => {
+  const resend = getClient();
+  return {
+    // Mirrors the nodemailer result shape the callers already use.
+    async sendMail(opts: MailOptions): Promise<{ messageId: string; accepted: string[]; rejected: string[] }> {
+      const to = Array.isArray(opts.to) ? opts.to : [opts.to];
+      const { data, error } = await resend.emails.send({ ...opts, to } as Parameters<typeof resend.emails.send>[0]);
+      if (error || !data) throw toError(error ?? { message: 'Resend returned no data' });
+      return { messageId: data.id, accepted: to, rejected: [] };
+    },
+
+    // Cheap authenticated call; a "sending access" key is restricted from listing domains but is still valid for sending.
+    async verify(): Promise<void> {
+      const { error } = await resend.domains.list();
+      if (error && error.name !== 'restricted_api_key') throw toError(error);
+    },
+  };
+};
 
 // Must be an address on a domain verified in Resend (onboarding@resend.dev only delivers to the account owner).
 export const FROM_ADDRESS = process.env.EMAIL_FROM || 'onboarding@resend.dev';
