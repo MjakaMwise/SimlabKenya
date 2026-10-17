@@ -37,15 +37,23 @@ export const SOCIAL = [
 ];
 
 /* [path, label, flag] flag 1 = interactive dot, 2 = NEW badge */
-export const NAV: [string, string, number?][] = [
+/** Links shown in the floating bar. About carries a drop-down of its sub-pages. */
+export const MAIN_NAV: [string, string][] = [
   ["/", "Home"],
-  ["/bench", "The Bench", 1],
-  ["/about", "About"],
   ["/programs", "Programs"],
-  ["/oceanshujaa", "Ocean Shujaa", 2],
+  ["/oceanshujaa", "Ocean Shujaa"],
+  ["/about", "About"],
+];
+/** Sub-pages that live under About. */
+export const ABOUT_SUB: [string, string][] = [
   ["/gallery", "Gallery"],
   ["/faq", "FAQ"],
   ["/contact", "Contact"],
+];
+/** Extra links that only appear in the side menu. */
+export const MORE_NAV: [string, string][] = [
+  ["/bench", "The Bench"],
+  ["/abstract", "Abstracts"],
 ];
 
 export const PCOL=['#5dade2','#22a06b','#13a8c4','#2f7fd8','#2fa66a','#d9568f','#8a63d2','#f08a24'];

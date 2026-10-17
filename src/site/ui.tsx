@@ -1,9 +1,8 @@
 /* Small presentational helpers shared by the SIM-Lab site pages. */
 import { Link } from "react-router-dom";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Icon } from "./Icon";
 import { IMG, wa, TEL, PHONE } from "./data";
-import { useSite } from "./SiteContext";
 
 export const Go = ({ to, children, cls = "go", arrow }: { to: string; children: ReactNode; cls?: string; arrow?: boolean }) => (
   <Link className={`btn ${cls}`} to={to}>
@@ -19,12 +18,29 @@ export const WaBtn = ({ text, label = "Chat on WhatsApp" }: { text?: string; lab
   </a>
 );
 
-export const RegisterBtn = ({ label = "Register Now", cls = "go" }: { label?: string; cls?: string }) => {
-  const { openRegister } = useSite();
+export const REGISTER_PATH = "/oceanshujaaregistration";
+
+export const RegisterBtn = ({ label = "Register Now", cls = "go", to = REGISTER_PATH }: { label?: string; cls?: string; to?: string }) => (
+  <Link className={`btn ${cls}`} to={to}>
+    {label}
+  </Link>
+);
+
+/** Fades and lifts its children in the first time they scroll into view. */
+export const Reveal = ({ children, className = "", delay = 0 }: { children: ReactNode; className?: string; delay?: number }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof IntersectionObserver === "undefined") { setSeen(true); return; }
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setSeen(true); io.disconnect(); } }, { threshold: 0.2 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   return (
-    <button type="button" className={`btn ${cls}`} onClick={openRegister}>
-      {label}
-    </button>
+    <div ref={ref} className={`rv ${seen ? "in" : ""} ${className}`} style={delay ? { transitionDelay: `${delay}ms` } : undefined}>
+      {children}
+    </div>
   );
 };
 
