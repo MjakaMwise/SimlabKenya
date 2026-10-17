@@ -14,6 +14,7 @@ import Bench from "./pages/Bench";
 import About from "./pages/About";
 import Programs from "./pages/Programs";
 import OceanShujaa from "./pages/OceanShujaa";
+import OceanShujaaRegistration from "./pages/OceanShujaaRegistration";
 import Gallery from "./pages/Gallery";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
@@ -55,6 +56,7 @@ const App = () => (
                 <Route path="/about" element={<About />} />
                 <Route path="/programs" element={<Programs />} />
                 <Route path="/oceanshujaa" element={<OceanShujaa />} />
+                <Route path="/oceanshujaaregistration" element={<OceanShujaaRegistration />} />
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/contact" element={<Contact />} />

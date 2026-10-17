@@ -4,10 +4,9 @@ import { AnimatePresence } from "framer-motion";
 import "./site.css";
 import { Icon } from "./Icon";
 import { RegisterBtn } from "./ui";
-import { NAV, IMG, EMAIL, PHONE, TEL, WEB, SOCIAL, wa } from "./data";
+import { MAIN_NAV, ABOUT_SUB, MORE_NAV, IMG, EMAIL, PHONE, TEL, WEB, SOCIAL, wa } from "./data";
 import { SiteContext } from "./SiteContext";
 import { ProgramPopup, PopReq } from "./ProgramPopup";
-import RegisterModal from "./RegisterModal";
 import LoadingScreen from "./LoadingScreen";
 import { useShopEnabled } from "@/hooks/useShopEnabled";
 import { useCart } from "@/hooks/useCart";
@@ -44,10 +43,11 @@ export default function SiteLayout() {
   const { pathname, hash } = useLocation();
   const shopEnabled = useShopEnabled();
   const cartCount = useCart().getItemCount();
-  const nav = useMemo<[string, string, number?][]>(() => {
-    const extra: [string, string][] = [["/abstract", "Abstracts"], ...(shopEnabled ? [["/shop", "Shop"] as [string, string]] : [])];
-    return [...NAV.slice(0, 5), ...extra, ...NAV.slice(5)];
-  }, [shopEnabled]);
+  // every page, for the title, the side menu and the footer
+  const nav = useMemo<[string, string][]>(() => [
+    ...MAIN_NAV, ...ABOUT_SUB, ...MORE_NAV,
+    ...(shopEnabled ? ([["/shop", "Shop"], ["/cart", "Cart"]] as [string, string][]) : []),
+  ], [shopEnabled]);
   const [theme, setTheme] = useState<string | undefined>();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pop, setPop] = useState<PopReq | null>(null);
@@ -63,7 +63,6 @@ export default function SiteLayout() {
   const [toastMsg, setToastMsg] = useState("");
   const [toastOn, setToastOn] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
-  const [regOpen, setRegOpen] = useState(false);
   const popId = useRef(0);
 
   const toast = useCallback((m: string) => {
@@ -75,8 +74,7 @@ export default function SiteLayout() {
   const openPop = useCallback((i: number, btn: HTMLElement | null, full: boolean) => {
     setPop({ i, btn, full, id: ++popId.current });
   }, []);
-  const openRegister = useCallback(() => { setMenuOpen(false); setRegOpen(true); }, []);
-  const ctx = useMemo(() => ({ openPop, toast, openRegister }), [openPop, toast, openRegister]);
+  const ctx = useMemo(() => ({ openPop, toast }), [openPop, toast]);
 
   // page title
   useEffect(() => {
@@ -88,10 +86,16 @@ export default function SiteLayout() {
   useEffect(() => {
     setMenuOpen(false);
     setPop(null);
-    setRegOpen(false);
     const target = hash && document.getElementById("w-" + hash.slice(1));
     if (target) target.scrollIntoView(); else window.scrollTo(0, 0);
   }, [pathname, hash]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, [menuOpen]);
 
   // fades between sections
   useLayoutEffect(() => {
@@ -119,37 +123,66 @@ export default function SiteLayout() {
                 <span><b>SIM-Lab</b><small>SCIENCE IN MOTION</small></span>
               </Link>
               <div className="links">
-                {nav.map(([k, l, f]) => (
-                  <Link key={k} to={k} className={`${f === 2 ? "hhl " : ""}${k === pathname ? "on" : ""}`}>
-                    {l}
-                    {f === 1 && <span className="dot" title="Interactive" />}
-                    {f === 2 && <span className="new">NEW</span>}
-                  </Link>
-                ))}
+                {MAIN_NAV.map(([k, l]) => {
+                  const isAbout = k === "/about";
+                  const active = k === pathname || (isAbout && ABOUT_SUB.some(([p]) => p === pathname));
+                  return (
+                    <div key={k} className={isAbout ? "has-sub" : undefined}>
+                      <Link to={k} className={`${k === "/oceanshujaa" ? "hhl " : ""}${active ? "on" : ""}`}>
+                        {l}
+                        {k === "/oceanshujaa" && <span className="new">NEW</span>}
+                      </Link>
+                      {isAbout && (
+                        <div className="sub" role="menu">
+                          {ABOUT_SUB.map(([sk, sl]) => <Link key={sk} to={sk} role="menuitem" className={sk === pathname ? "on" : ""}>{sl}</Link>)}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+                {shopEnabled && <Link to="/shop" className={pathname === "/shop" ? "on" : ""}>Shop</Link>}
               </div>
               <div className="tools">
                 {shopEnabled && (
                   <Link className="ib cartlink" to="/cart" aria-label={`Cart, ${cartCount} items`}>
-                    <Icon name="tag" />
+                    <Icon name="cart" />
                     {cartCount > 0 && <span className="n">{cartCount}</span>}
                   </Link>
                 )}
                 <RegisterBtn />
                 <button className="ib" onClick={toggleTheme} aria-label="Toggle dark mode"><Icon name="moon" /></button>
-                <button className="ib" id="burger" onClick={() => setMenuOpen((o) => !o)} aria-label="Open menu" aria-expanded={menuOpen}><Icon name="menu" /></button>
+                <button className="ib" id="burger" onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="sidenav"><Icon name="menu" /></button>
               </div>
             </nav>
-            <div id="mobile" className={menuOpen ? "open" : ""}>
-              {nav.map(([k, l, f]) => (
-                <Link key={k} to={k} className={k === pathname ? "on" : ""}>
-                  {l}
-                  {f === 2 && <span className="new">NEW</span>}
-                </Link>
-              ))}
-              <RegisterBtn />
-            </div>
           </div>
         </header>
+
+        <div id="sidebg" className={menuOpen ? "open" : ""} onClick={() => setMenuOpen(false)} />
+        <aside id="sidenav" className={menuOpen ? "open" : ""} aria-label="Site menu" aria-hidden={!menuOpen} {...(!menuOpen && { inert: "" as unknown as boolean })}>
+          <div className="sn-top">
+            <b>Menu</b>
+            <button className="ib" onClick={() => setMenuOpen(false)} aria-label="Close menu"><Icon name="x" /></button>
+          </div>
+          <div className="sn-links">
+            {MAIN_NAV.map(([k, l]) => (
+              <span key={k} style={{ display: "contents" }}>
+                <Link to={k} className={k === pathname ? "on" : ""}>
+                  {l}
+                  {k === "/oceanshujaa" && <span className="new">NEW</span>}
+                </Link>
+                {k === "/about" && ABOUT_SUB.map(([sk, sl]) => <Link key={sk} to={sk} className={`subl ${sk === pathname ? "on" : ""}`}>{sl}</Link>)}
+              </span>
+            ))}
+            {MORE_NAV.map(([k, l]) => <Link key={k} to={k} className={k === pathname ? "on" : ""}>{l}</Link>)}
+            {shopEnabled && (
+              <>
+                <Link to="/shop" className={pathname === "/shop" ? "on" : ""}>Shop</Link>
+                <Link to="/cart" className={pathname === "/cart" ? "on" : ""}>Cart{cartCount > 0 ? ` (${cartCount})` : ""}</Link>
+              </>
+            )}
+          </div>
+          <RegisterBtn label="Register for Ocean Shujaa" />
+        </aside>
 
         <main><Outlet /></main>
 
@@ -174,7 +207,7 @@ export default function SiteLayout() {
               </div>
               <div>
                 <h4>Quick Links</h4>
-                {nav.slice(1).map(([k, l]) => <Link key={k} to={k}>{l === "About" ? "About Us" : l}</Link>)}
+                {nav.filter(([k]) => k !== "/" && k !== "/cart").map(([k, l]) => <Link key={k} to={k}>{l === "About" ? "About Us" : l}</Link>)}
               </div>
               <div>
                 <h4>Connect With Us</h4>
@@ -192,7 +225,6 @@ export default function SiteLayout() {
           </div>
         </footer>
 
-        {regOpen && <RegisterModal onClose={() => setRegOpen(false)} />}
         {pop && <ProgramPopup key={pop.id} req={pop} onClosed={() => setPop(null)} />}
         <div id="toast" role="status" className={toastOn ? "show" : ""}>{toastMsg}</div>
       </div>
