@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
-import { requireAuth, requireAdmin } from '../middleware/auth.js';
+import { requireAuth, requirePermission } from '../middleware/auth.js';
 import {
   createRegistration, listRegistrations, getSummary,
   updateRegistration, deleteRegistration, exportCsv,
@@ -19,12 +19,12 @@ const registerLimiter = rateLimit({
 // Public
 router.post('/registrations', registerLimiter, createRegistration);
 
-// Admin only
-router.use('/admin', requireAuth, requireAdmin);
-router.get('/admin/registrations', listRegistrations);
-router.get('/admin/summary', getSummary);
-router.get('/admin/export.csv', exportCsv);
-router.patch('/admin/registrations/:id', updateRegistration);
-router.delete('/admin/registrations/:id', deleteRegistration);
+// Staff delegated Ocean Shujaa (view to read and export, manage to change or delete); administrators always pass.
+router.use('/admin', requireAuth);
+router.get('/admin/registrations', requirePermission('ocean', 'view'), listRegistrations);
+router.get('/admin/summary', requirePermission('ocean', 'view'), getSummary);
+router.get('/admin/export.csv', requirePermission('ocean', 'view'), exportCsv);
+router.patch('/admin/registrations/:id', requirePermission('ocean', 'manage'), updateRegistration);
+router.delete('/admin/registrations/:id', requirePermission('ocean', 'manage'), deleteRegistration);
 
 export default router;

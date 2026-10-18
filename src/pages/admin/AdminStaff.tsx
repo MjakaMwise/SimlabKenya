@@ -25,6 +25,9 @@ const AREAS: [string, string][] = [
     ["orders", "Orders"],
     ["abstracts", "Abstracts"],
     ["shop", "Shop (products)"],
+    ["ocean", "Ocean Shujaa"],
+    ["whatsapp", "WhatsApp inbox"],
+    ["email", "Email"],
 ];
 
 const accessOf = (perms: string[], area: string): Access =>

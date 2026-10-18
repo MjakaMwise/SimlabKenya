@@ -128,6 +128,78 @@ const STATEMENTS = [
      updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
    )`,
   `CREATE INDEX IF NOT EXISTS school_students_school_idx ON school_students (school_id, created_at DESC)`,
+  // Bulk and single email sent from the admin. Body is kept so failed sends can be retried.
+  `CREATE TABLE IF NOT EXISTS email_log (
+     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     batch_id   UUID NOT NULL,
+     sent_by    UUID REFERENCES admin_users(id) ON DELETE SET NULL,
+     to_email   TEXT NOT NULL,
+     to_name    TEXT,
+     subject    TEXT NOT NULL,
+     body       TEXT NOT NULL,
+     status     TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued','sent','failed')),
+     error      TEXT,
+     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+     sent_at    TIMESTAMPTZ
+   )`,
+  `CREATE INDEX IF NOT EXISTS email_log_created_idx ON email_log (created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS email_log_batch_idx ON email_log (batch_id)`,
+  // WhatsApp inbox (OpenWA). phone holds digits only, country code first (254712345678).
+  `CREATE TABLE IF NOT EXISTS wa_conversations (
+     id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     phone                TEXT NOT NULL UNIQUE,
+     name                 TEXT,
+     status               TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','resolved')),
+     assigned_to          UUID REFERENCES admin_users(id) ON DELETE SET NULL,
+     bot_state            TEXT NOT NULL DEFAULT 'main',
+     bot_active           BOOLEAN NOT NULL DEFAULT true,
+     needs_human          BOOLEAN NOT NULL DEFAULT false,
+     unread               INTEGER NOT NULL DEFAULT 0,
+     last_message_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+     last_message_preview TEXT,
+     created_at           TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
+  `CREATE INDEX IF NOT EXISTS wa_conversations_last_idx ON wa_conversations (last_message_at DESC)`,
+  `CREATE TABLE IF NOT EXISTS wa_messages (
+     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     conversation_id UUID NOT NULL REFERENCES wa_conversations(id) ON DELETE CASCADE,
+     direction       TEXT NOT NULL CHECK (direction IN ('in','out')),
+     sender          TEXT NOT NULL CHECK (sender IN ('client','bot','staff')),
+     staff_id        UUID REFERENCES admin_users(id) ON DELETE SET NULL,
+     body            TEXT NOT NULL,
+     wa_id           TEXT UNIQUE,
+     status          TEXT NOT NULL DEFAULT 'sent' CHECK (status IN ('sending','sent','failed')),
+     error           TEXT,
+     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
+  `CREATE INDEX IF NOT EXISTS wa_messages_conv_idx ON wa_messages (conversation_id, created_at)`,
+  // Menu-driven bot: one row per screen. options is [{ "key": "1", "goto": "shop" }, ...].
+  `CREATE TABLE IF NOT EXISTS bot_nodes (
+     id      TEXT PRIMARY KEY,
+     text    TEXT NOT NULL,
+     options JSONB NOT NULL DEFAULT '[]'::jsonb,
+     input   TEXT CHECK (input IN ('order','registration')),
+     action  TEXT CHECK (action IN ('human')),
+     sort    INTEGER NOT NULL DEFAULT 0
+   )`,
+  `INSERT INTO bot_nodes (id, text, options, input, action, sort) VALUES
+     ('main', E'Welcome to SIM-Lab Kenya.\nReply with a number:\n\n1. Shop & products\n2. Track my order\n3. Ocean Shujaa\n4. Science fair abstracts\n5. Talk to a person',
+        '[{"key":"1","goto":"shop"},{"key":"2","goto":"order_ask"},{"key":"3","goto":"ocean"},{"key":"4","goto":"abstracts"},{"key":"5","goto":"human"}]', NULL, NULL, 0),
+     ('shop', E'Shop\n\n1. View products\n2. How to pay\n3. Delivery info\n0. Main menu',
+        '[{"key":"1","goto":"shop_products"},{"key":"2","goto":"shop_pay"},{"key":"3","goto":"shop_delivery"},{"key":"0","goto":"main"}]', NULL, NULL, 1),
+     ('shop_products', E'Browse our kits at https://simlabkenya.co.ke/shop\n\n0. Main menu', '[{"key":"0","goto":"main"}]', NULL, NULL, 2),
+     ('shop_pay', E'Pay on collection (cash or M-Pesa) for pickup, on delivery in Mombasa, or by M-Pesa or bank transfer before shipping elsewhere.\n\n0. Main menu', '[{"key":"0","goto":"main"}]', NULL, NULL, 3),
+     ('shop_delivery', E'Pickup is at the IOME001 Innovation Hub. Delivery fees are confirmed when we contact you about your order.\n\n0. Main menu', '[{"key":"0","goto":"main"}]', NULL, NULL, 4),
+     ('order_ask', E'Please send your order number.', '[{"key":"0","goto":"main"}]', 'order', NULL, 5),
+     ('ocean', E'Ocean Shujaa\n\n1. Check my registration\n2. About the program\n0. Main menu',
+        '[{"key":"1","goto":"ocean_ask"},{"key":"2","goto":"ocean_info"},{"key":"0","goto":"main"}]', NULL, NULL, 6),
+     ('ocean_ask', E'Please send the phone number or email you registered with.', '[{"key":"0","goto":"main"}]', 'registration', NULL, 7),
+     ('ocean_info', E'Ocean Shujaa is our holiday program for learners from primary to senior secondary. Dates and registration are on https://simlabkenya.co.ke/oceanshujaa\n\n0. Main menu', '[{"key":"0","goto":"main"}]', NULL, NULL, 8),
+     ('abstracts', E'Science fair abstracts are submitted online at https://simlabkenya.co.ke and reviewed by our team. You will get an email when the status changes.\n\n0. Main menu', '[{"key":"0","goto":"main"}]', NULL, NULL, 9),
+     ('human', E'Connecting you to our team. We will reply here shortly.', '[]', NULL, 'human', 10)
+   ON CONFLICT (id) DO NOTHING`,
+  `INSERT INTO site_settings (key, value) VALUES ('wa_bot_enabled', 'true'::jsonb) ON CONFLICT (key) DO NOTHING`,
+  `INSERT INTO site_settings (key, value) VALUES ('wa_bot_hours', '{"enabled":false,"start":"08:00","end":"17:00","days":[1,2,3,4,5]}'::jsonb) ON CONFLICT (key) DO NOTHING`,
 ];
 
 export const migrate = async (): Promise<void> => {

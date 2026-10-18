@@ -1,6 +1,7 @@
 import app from './src/app.js';
 import { migrate } from './src/db/migrate.js';
 import { verifyEmailTransport, explainEmailError } from './src/services/emailService.js';
+import { startWhatsApp } from './src/services/whatsapp.js';
 
 const PORT = Number(process.env.PORT) || 5000;
 
@@ -14,6 +15,8 @@ app.listen(PORT, () => {
   console.log(`  → Admin:     http://localhost:${PORT}/api/admin`);
   console.log(`  → Health:    http://localhost:${PORT}/api/health`);
 });
+
+startWhatsApp();
 
 // Fail loudly in the logs if outgoing email is broken: admin login codes depend on it.
 verifyEmailTransport()

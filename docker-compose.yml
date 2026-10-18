@@ -33,6 +33,25 @@ services:
       db:
         condition: service_healthy
 
+  # WhatsApp (OpenWA). Off until deploy/whatsapp-setup.sh enables the "whatsapp" profile.
+  # No "ports:" on purpose: only the api container reaches it, over the Docker network.
+  whatsapp:
+    profiles: ["whatsapp"]
+    image: openwa/wa-automate:latest
+    restart: unless-stopped
+    init: true
+    shm_size: 1gb
+    environment:
+      W_A_V: ${WA_VERSION:-5.1.0}
+      WA_PORT: 8080
+      WA_HOST: 0.0.0.0
+      WA_SESSION_ID: simlab
+      WA_USER_DATA_DIR: /sessions/simlab
+      WA_API_KEY: ${WA_API_KEY:-}
+    command: ["--session-id", "simlab", "--host", "0.0.0.0", "--port", "8080"]
+    volumes:
+      - wa_sessions:/sessions
+
   web:
     build:
       context: .
@@ -52,5 +71,6 @@ services:
 volumes:
   pgdata:
   uploads:
+  wa_sessions:
   caddy_data:
   caddy_config:

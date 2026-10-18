@@ -7,6 +7,8 @@ import oceanShujaaRoutes from './oceanShujaa.js';
 import schoolRoutes from './schools.js';
 import settingsRoutes from './settings.js';
 import chatRoutes from './chat.js';
+import emailRoutes from './email.js';
+import whatsappRoutes from './whatsapp.js';
 
 const router = Router();
 
@@ -18,6 +20,8 @@ router.use('/ocean-shujaa', oceanShujaaRoutes);
 router.use('/schools', schoolRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/chat', chatRoutes);
+router.use('/email', emailRoutes);
+router.use('/whatsapp', whatsappRoutes);
 
 // Health check
 router.get('/health', (_req, res) => {

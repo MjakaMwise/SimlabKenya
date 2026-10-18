@@ -18,7 +18,7 @@ export const CHANNELS: Channel[] = [
   { id: 'orders', name: 'orders', description: 'Shop orders, payments and deliveries.', area: 'orders' },
   { id: 'abstracts', name: 'abstracts', description: 'Science fair abstracts waiting for review.', area: 'abstracts' },
   { id: 'shop', name: 'shop', description: 'Products, stock and restocking.', area: 'shop' },
-  { id: 'ocean-shujaa', name: 'ocean-shujaa', description: 'Registrations for the Ocean Shujaa holiday program.', area: 'admin' },
+  { id: 'ocean-shujaa', name: 'ocean-shujaa', description: 'Registrations for the Ocean Shujaa holiday program.', area: 'ocean' },
 ];
 
 export const channelById = (id: string) => CHANNELS.find((c) => c.id === id);
