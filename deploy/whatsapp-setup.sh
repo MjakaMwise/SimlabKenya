@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
-# whatsapp-setup.sh — set up the WhatsApp inbox (OpenWA) on the VPS, one page at a time.
+# whatsapp-setup.sh — set up the WhatsApp inbox on the VPS, one page at a time.
 #
 #   ./deploy/whatsapp-setup.sh [options]
 #
 # Pages (each is safe to re-run):
 #   1. Preflight      Docker, project files, memory, the main stack
 #   2. Configure      create WA_API_KEY in .env (kept if already set)
-#   3. Start          pull and start the WhatsApp container, restart the API so it picks the key up
-#   4. Link number    show the QR code to scan from Linked devices on the business phone
+#   3. Start          build and start the WhatsApp container, restart the API so it picks the key up
+#   4. Link number    show the QR code (or use whatsapp-link.sh to link with a phone number)
 #   5. Verify         container health, session state, API reachability, next steps in the admin
 #
 # Options:
-#   --qr              only show the QR code (page 4) and wait for the scan
+#   --qr              only show the QR code (same as ./deploy/whatsapp-qr.sh)
 #   --status          only run the checks (page 5)
 #   --stop            stop the WhatsApp container (the linked session is kept)
 #   --reset-session   forget the linked number so a new one can be scanned (asks first)
@@ -30,7 +30,7 @@ for a in "$@"; do
     --stop) ACTION="stop" ;;
     --reset-session) ACTION="reset" ;;
     --yes) ASSUME_YES=1 ;;
-    -h|--help) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,23p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "Unknown option: $a (try --help)"; exit 2 ;;
   esac
 done
@@ -64,7 +64,7 @@ env_set() {
 }
 
 health() { # prints the /health JSON from inside the container, or nothing
-  dc exec -T whatsapp node -e "fetch('http://127.0.0.1:8080/health').then(r=>r.text()).then(t=>process.stdout.write(t)).catch(()=>process.exit(1))" 2>/dev/null || true
+  dc exec -T whatsapp node -e "fetch('http://127.0.0.1:8080/health',{headers:{'X-API-Key':process.env.WA_API_KEY||''}}).then(r=>r.text()).then(t=>process.stdout.write(t)).catch(()=>process.exit(1))" 2>/dev/null || true
 }
 is_ready() { health | grep -q '"ready":[[:space:]]*true'; }
 
@@ -76,26 +76,17 @@ if [ "$ACTION" = "reset" ]; then
   warn "This forgets the linked number. Clients cannot be messaged until a number is scanned again."
   confirm "Forget the linked session?" || die "Cancelled."
   dc stop whatsapp
-  dc run --rm --no-deps --entrypoint sh whatsapp -c 'rm -rf /sessions/simlab' && ok "Session removed"
-  dc up -d whatsapp; ok "Started. Run ./deploy/whatsapp-setup.sh --qr to link a number."; exit 0
+  dc run --rm --no-deps --entrypoint sh whatsapp -c 'rm -rf /sessions/baileys' && ok "Session removed"
+  dc up -d whatsapp; ok "Started. Run ./deploy/whatsapp-qr.sh to link a number."; exit 0
 fi
 
 show_qr() {
   info "Scan from the business phone: WhatsApp > Settings > Linked devices > Link a device."
-  info "The code appears in the log below and refreshes about every 20 seconds. Ctrl+C when linked."
+  info "No camera handy? Press Ctrl+C and run ./deploy/whatsapp-link.sh <number> to link with a code."
   echo
-  # Stops by itself once the session is ready, otherwise the operator presses Ctrl+C.
-  ( dc logs -f --tail 60 whatsapp & echo $! > /tmp/.wa-logs.pid; wait ) &
-  local logs_pid=$!
-  local waited=0
-  while [ "$waited" -lt 300 ]; do
-    if is_ready; then break; fi
-    sleep 4; waited=$((waited+4))
-  done
-  kill "$(cat /tmp/.wa-logs.pid 2>/dev/null)" "$logs_pid" 2>/dev/null || true
-  rm -f /tmp/.wa-logs.pid
+  dc exec whatsapp node cli.mjs qr || true
   echo
-  if is_ready; then ok "Number linked."; else warn "Not linked yet. Run ./deploy/whatsapp-setup.sh --qr to try again."; fi
+  if is_ready; then ok "Number linked."; else warn "Not linked yet. Run ./deploy/whatsapp-qr.sh to try again."; fi
 }
 
 checks() {
@@ -105,13 +96,13 @@ checks() {
   if [ -z "$h" ]; then warn "The WhatsApp server did not answer yet (it can take a minute after a start)"; bad=1
   else
     ok "The WhatsApp server answers"
-    if echo "$h" | grep -q '"ready":[[:space:]]*true'; then ok "A number is linked and ready"; else warn "No number is linked yet: ./deploy/whatsapp-setup.sh --qr"; bad=1; fi
+    if echo "$h" | grep -q '"ready":[[:space:]]*true'; then ok "A number is linked and ready"; else warn "No number is linked yet: ./deploy/whatsapp-qr.sh"; bad=1; fi
   fi
-  if dc exec -T api node -e "fetch('http://whatsapp:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then ok "The website API can reach WhatsApp"; else warn "The website API cannot reach WhatsApp. Check: docker compose --profile whatsapp ps"; bad=1; fi
+  if dc exec -T api node -e "fetch('http://whatsapp:8080/health',{headers:{'X-API-Key':process.env.WA_API_KEY||''}}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))" >/dev/null 2>&1; then ok "The website API can reach WhatsApp"; else warn "The website API cannot reach WhatsApp. Check: docker compose --profile whatsapp ps"; bad=1; fi
   return $bad
 }
 
-if [ "$ONLY" = "qr" ]; then page "Link number"; show_qr; exit 0; fi
+if [ "$ONLY" = "qr" ]; then exec "$ROOT/deploy/whatsapp-qr.sh"; fi
 if [ "$ONLY" = "status" ]; then PAGE=4; page "Verify"; checks && exit 0 || exit 1; fi
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -134,15 +125,13 @@ if [ -z "$KEY" ]; then
 else
   ok "Access key already set; keeping it"
 fi
-[ -n "$(env_get WA_VERSION)" ] || env_set WA_VERSION 5.1.0
-ok "OpenWA version: $(env_get WA_VERSION)"
 info "The WhatsApp server is not published to the internet. Only the website API can reach it."
 pause
 
 # ══════════════════════════════════════════════════════════════════════════════
 page "Start"
-info "Pulling the image (large, first time only)..."
-dc pull whatsapp
+info "Building the WhatsApp image (first time takes a minute)..."
+dc build whatsapp
 dc up -d whatsapp
 dc up -d api
 ok "Containers started. Waiting for the WhatsApp server..."
@@ -170,7 +159,8 @@ ${B}Next, in the admin${N}
 
 Commands
   ./deploy/whatsapp-setup.sh --status          re-run the checks
-  ./deploy/whatsapp-setup.sh --qr              show the QR code again
+  ./deploy/whatsapp-qr.sh                      show the QR code
+  ./deploy/whatsapp-link.sh 0712345678         link with a code typed on the phone instead
   ./deploy/whatsapp-setup.sh --stop            stop WhatsApp (the link is kept)
   ./deploy/whatsapp-setup.sh --reset-session   forget the number and link another
   docker compose --profile whatsapp logs -f whatsapp

@@ -2,7 +2,7 @@ import pool from '../config/postgres.js';
 import { notifyUsers } from './push.js';
 import { handleIncoming } from './bot.js';
 
-// Talks to the OpenWA container (openwa/wa-automate v5) over the private Docker network.
+// Talks to the WhatsApp bridge container (./whatsapp) over the private Docker network.
 // Incoming messages arrive on its server-sent-events stream, so no public webhook is needed.
 const WA_URL = (process.env.WA_URL || 'http://whatsapp:8080').replace(/\/$/, '');
 const WA_API_KEY = process.env.WA_API_KEY || '';
@@ -23,7 +23,7 @@ const chatId = (phone: string) => `${phone}@c.us`;
 
 export interface WaStatus { online: boolean; connected: boolean; ready: boolean; state: string | null; qr: string | null }
 
-// The QR is only worth showing while pairing. The field name is not documented for v5, so look for it.
+// The QR is only worth showing while pairing.
 const findQr = (v: unknown, depth = 0): string | null => {
   if (!v || typeof v !== 'object' || depth > 4) return null;
   for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
@@ -164,7 +164,7 @@ const readStream = async () => {
   }
 };
 
-// Keeps one connection to OpenWA open, reconnecting quietly while the container is down or starting.
+// Keeps one connection to the bridge open, reconnecting quietly while the container is down or starting.
 export const startWhatsApp = () => {
   if (!waConfigured || streaming) return;
   streaming = true;
@@ -174,7 +174,7 @@ export const startWhatsApp = () => {
       await readStream();
       delay = 2000;
     } catch (err) {
-      if (delay >= 30000) console.warn(`[whatsapp] waiting for OpenWA at ${WA_URL}: ${(err as Error).message}`);
+      if (delay >= 30000) console.warn(`[whatsapp] waiting for WhatsApp at ${WA_URL}: ${(err as Error).message}`);
       delay = Math.min(delay * 2, 60000);
     }
     setTimeout(loop, delay);
