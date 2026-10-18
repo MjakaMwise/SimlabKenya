@@ -355,6 +355,87 @@ export const sendOceanShujaaStatusEmail = async (d: OceanShujaaRegistrationMail)
   );
 };
 
+// ── School registration emails ────────────────────────────────────────────────
+
+export interface SchoolMail {
+  name: string;
+  adminName: string;
+  adminEmail: string;
+  adminPhone: string;
+  county: string;
+  status?: string;
+}
+
+export const sendSchoolRegistrationEmail = async (d: SchoolMail, portalUrl: string): Promise<void> => {
+  const transporter = createTransporter();
+  const from = `"Ocean Shujaa" <${FROM_ADDRESS}>`;
+  const details = rows([
+    ['School', esc(d.name)],
+    ['County', esc(d.county)],
+    ['School administrator', esc(d.adminName)],
+  ]);
+
+  await withTimeout(
+    transporter.sendMail({
+      from,
+      to: d.adminEmail,
+      subject: `${d.name} is registered for Ocean Shujaa`,
+      html: layout(
+        'School registered',
+        p(`Dear ${esc(d.adminName)},`) +
+          p(`Thank you for registering <strong>${esc(d.name)}</strong> for Ocean Shujaa. Sign in to your school portal with this email address and the password you chose to add and manage your students.`) +
+          details +
+          `<p style="margin:24px 0 0;">${button(portalUrl, 'Open school portal')}</p>` +
+          oceanShujaaFooter,
+        { brand: 'oceanShujaa' }
+      ),
+    }),
+    EMAIL_TIMEOUT_MS
+  );
+
+  if (ADMIN_EMAIL) {
+    await withTimeout(
+      transporter.sendMail({
+        from,
+        to: ADMIN_EMAIL,
+        subject: `New school registration — ${d.name}`,
+        html: layout(
+          'New school registration',
+          details +
+            rows([
+              ['Email', link(`mailto:${d.adminEmail}`, d.adminEmail)],
+              ['Phone', esc(d.adminPhone)],
+            ]) +
+            `<p style="margin:24px 0 0;">${button(`${ADMIN_DASHBOARD_URL}/schools`, 'Open schools')}</p>`,
+          { brand: 'oceanShujaa' }
+        ),
+      }),
+      EMAIL_TIMEOUT_MS
+    );
+  }
+};
+
+export const sendSchoolStatusEmail = async (d: SchoolMail & { status: string }): Promise<void> => {
+  const label = OS_STATUS_LABELS[d.status] ?? d.status;
+  const transporter = createTransporter();
+  await withTimeout(
+    transporter.sendMail({
+      from: `"Ocean Shujaa" <${FROM_ADDRESS}>`,
+      to: d.adminEmail,
+      subject: `Ocean Shujaa school registration ${label.toLowerCase()} — ${d.name}`,
+      html: layout(
+        'Registration update',
+        p(`Dear ${esc(d.adminName)},`) +
+          p(OS_STATUS_MESSAGES[d.status] ?? `The status of your school registration is now <strong>${esc(label)}</strong>.`) +
+          rows([['School', esc(d.name)], ['Status', `<strong>${esc(label)}</strong>`]]) +
+          oceanShujaaFooter,
+        { brand: 'oceanShujaa' }
+      ),
+    }),
+    EMAIL_TIMEOUT_MS
+  );
+};
+
 // ── OTP Email ─────────────────────────────────────────────────────────────────
 
 export const sendOTPEmail = async (email: string, otp: string): Promise<void> => {

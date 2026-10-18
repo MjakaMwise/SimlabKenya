@@ -88,6 +88,46 @@ const STATEMENTS = [
      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
    )`,
   `CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id)`,
+  // Individual / group / school registrations. Schools sign in to a portal and manage their own students.
+  `ALTER TABLE ocean_shujaa_registrations
+     ADD COLUMN IF NOT EXISTS registration_type TEXT NOT NULL DEFAULT 'individual'`,
+  `DO $$ BEGIN
+     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'os_reg_type_check') THEN
+       ALTER TABLE ocean_shujaa_registrations
+         ADD CONSTRAINT os_reg_type_check CHECK (registration_type IN ('individual', 'group'));
+     END IF;
+   END $$`,
+  `CREATE TABLE IF NOT EXISTS schools (
+     id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     name            TEXT NOT NULL,
+     school_type     TEXT NOT NULL,
+     county          TEXT NOT NULL,
+     admin_name      TEXT NOT NULL,
+     admin_email     TEXT NOT NULL,
+     admin_phone     TEXT NOT NULL,
+     password_hash   TEXT NOT NULL,
+     status          TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','confirmed','waitlisted','cancelled')),
+     admin_notes     TEXT,
+     sessions_valid_after TIMESTAMPTZ NOT NULL DEFAULT to_timestamp(0),
+     created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
+     updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS schools_admin_email_idx ON schools (lower(admin_email))`,
+  `CREATE TABLE IF NOT EXISTS school_students (
+     id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+     school_id      UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+     name           TEXT NOT NULL,
+     age            SMALLINT CHECK (age BETWEEN 3 AND 99),
+     grade          TEXT,
+     level          TEXT NOT NULL,
+     guardian_name  TEXT,
+     guardian_phone TEXT,
+     guardian_email TEXT,
+     notes          TEXT,
+     created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+     updated_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+   )`,
+  `CREATE INDEX IF NOT EXISTS school_students_school_idx ON school_students (school_id, created_at DESC)`,
 ];
 
 export const migrate = async (): Promise<void> => {

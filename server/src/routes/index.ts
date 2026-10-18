@@ -4,6 +4,7 @@ import orderRoutes from './orders.js';
 import abstractRoutes from './abstracts.js';
 import adminRoutes from './admin.js';
 import oceanShujaaRoutes from './oceanShujaa.js';
+import schoolRoutes from './schools.js';
 import settingsRoutes from './settings.js';
 import chatRoutes from './chat.js';
 
@@ -14,6 +15,7 @@ router.use('/orders', orderRoutes);
 router.use('/abstracts', abstractRoutes);
 router.use('/admin', adminRoutes);
 router.use('/ocean-shujaa', oceanShujaaRoutes);
+router.use('/schools', schoolRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/chat', chatRoutes);
 

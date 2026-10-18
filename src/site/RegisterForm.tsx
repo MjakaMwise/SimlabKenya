@@ -6,7 +6,10 @@ const LEVELS: [string, string][] = [
   ["college", "College"], ["group", "Science club / school group"], ["other", "Other"],
 ];
 
-const RegisterForm = () => {
+type Mode = "individual" | "group";
+
+const RegisterForm = ({ mode = "individual" }: { mode?: Mode }) => {
+  const group = mode === "group";
   const { toast } = useSite();
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
@@ -22,13 +25,14 @@ const RegisterForm = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           participantName: v("participantName"),
-          participantAge: v("participantAge") || null,
+          participantAge: group ? null : v("participantAge") || null,
           level: v("level"),
           institution: v("institution"),
           guardianName: v("guardianName"),
           guardianPhone: v("guardianPhone"),
           guardianEmail: v("guardianEmail"),
-          groupSize: v("groupSize") || 1,
+          groupSize: group ? v("groupSize") : 1,
+          registrationType: mode,
           notes: v("notes") || null,
           website: v("website"),
         }),
@@ -49,7 +53,7 @@ const RegisterForm = () => {
     return (
       <div className="reg-ok" role="status">
         <h3>Registration received</h3>
-        <p>Thank you. The SIM-Lab team will contact you shortly to confirm your place in Ocean Shujaa.</p>
+        <p>Thank you. The SIM-Lab team will contact you shortly to confirm {group ? "your group's places" : "your place"} in Ocean Shujaa.</p>
       </div>
     );
   }
@@ -57,8 +61,17 @@ const RegisterForm = () => {
   return (
     <form className="reg-form" onSubmit={submit}>
       <div className="two">
-        <label htmlFor="r-name">Participant name<input type="text" id="r-name" name="participantName" required minLength={2} maxLength={120} autoComplete="name" /></label>
-        <label htmlFor="r-age">Age<input type="number" id="r-age" name="participantAge" min={3} max={99} /></label>
+        {group ? (
+          <>
+            <label htmlFor="r-name">Group / club name<input type="text" id="r-name" name="participantName" required minLength={2} maxLength={120} /></label>
+            <label htmlFor="r-size">Number of participants<input type="number" id="r-size" name="groupSize" min={2} max={500} defaultValue={5} required /></label>
+          </>
+        ) : (
+          <>
+            <label htmlFor="r-name">Participant name<input type="text" id="r-name" name="participantName" required minLength={2} maxLength={120} autoComplete="name" /></label>
+            <label htmlFor="r-age">Age<input type="number" id="r-age" name="participantAge" min={3} max={99} /></label>
+          </>
+        )}
       </div>
       <div className="two">
         <label htmlFor="r-level">Level
@@ -67,19 +80,18 @@ const RegisterForm = () => {
             {LEVELS.map(([val, label]) => <option key={val} value={val}>{label}</option>)}
           </select>
         </label>
-        <label htmlFor="r-inst">School / institution<input type="text" id="r-inst" name="institution" required minLength={2} maxLength={160} /></label>
+        <label htmlFor="r-inst">{group ? "School / organisation" : "School / institution"}<input type="text" id="r-inst" name="institution" required minLength={2} maxLength={160} /></label>
       </div>
       <div className="two">
-        <label htmlFor="r-gname">Parent / guardian name<input type="text" id="r-gname" name="guardianName" required minLength={2} maxLength={120} /></label>
+        <label htmlFor="r-gname">{group ? "Group leader / teacher name" : "Parent / guardian name"}<input type="text" id="r-gname" name="guardianName" required minLength={2} maxLength={120} /></label>
         <label htmlFor="r-gphone">Phone<input type="tel" id="r-gphone" name="guardianPhone" required minLength={7} maxLength={25} autoComplete="tel" /></label>
       </div>
       <div className="two">
         <label htmlFor="r-gemail">Email<input type="email" id="r-gemail" name="guardianEmail" required maxLength={160} autoComplete="email" /></label>
-        <label htmlFor="r-size">Number of participants<input type="number" id="r-size" name="groupSize" min={1} max={500} defaultValue={1} /></label>
       </div>
       <label htmlFor="r-notes">Anything we should know? (optional)<textarea id="r-notes" name="notes" maxLength={2000} /></label>
       <div className="hp" aria-hidden="true"><label>Leave empty<input type="text" name="website" tabIndex={-1} autoComplete="off" /></label></div>
-      <div><button className="btn go xl" type="submit" disabled={busy}>{busy ? "Sending..." : "Register for Ocean Shujaa"}</button></div>
+      <div><button className="btn go xl" type="submit" disabled={busy}>{busy ? "Sending..." : group ? "Register our group" : "Register for Ocean Shujaa"}</button></div>
     </form>
   );
 };

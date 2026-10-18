@@ -118,37 +118,11 @@ export default function SiteLayout() {
         <header>
           <div className="wrap">
             <nav className="nav" aria-label="Main">
-              <Link className="brand" to="/">
+              <Link className="brand-logo" to="/" aria-label="SIM-Lab Kenya home">
                 <img src={IMG.logo} alt="SIM-Lab Kenya logo" />
-                <span><b>SIM-Lab</b><small>SCIENCE IN MOTION</small></span>
               </Link>
-              <div className="links">
-                {MAIN_NAV.map(([k, l]) => {
-                  const isAbout = k === "/about";
-                  const active = k === pathname || (isAbout && ABOUT_SUB.some(([p]) => p === pathname));
-                  return (
-                    <div key={k} className={isAbout ? "has-sub" : undefined}>
-                      <Link to={k} className={`${k === "/oceanshujaa" ? "hhl " : ""}${active ? "on" : ""}`}>
-                        {l}
-                        {k === "/oceanshujaa" && <span className="new">NEW</span>}
-                      </Link>
-                      {isAbout && (
-                        <div className="sub" role="menu">
-                          {ABOUT_SUB.map(([sk, sl]) => <Link key={sk} to={sk} role="menuitem" className={sk === pathname ? "on" : ""}>{sl}</Link>)}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              <Link className="brand-name" to="/">SIM-Lab</Link>
               <div className="tools">
-                {shopEnabled && <Link to="/shop" className={`shoplink ${pathname === "/shop" ? "on" : ""}`}>Shop</Link>}
-                {shopEnabled && (
-                  <Link className="ib cartlink" to="/cart" aria-label={`Cart, ${cartCount} items`}>
-                    <Icon name="cart" />
-                    {cartCount > 0 && <span className="n">{cartCount}</span>}
-                  </Link>
-                )}
                 <button className="ib" id="burger" onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="sidenav"><Icon name="menu" /></button>
               </div>
             </nav>
@@ -172,6 +146,7 @@ export default function SiteLayout() {
               </span>
             ))}
             {MORE_NAV.map(([k, l]) => <Link key={k} to={k} className={k === pathname ? "on" : ""}>{l}</Link>)}
+            <Link to="/school/login" className={pathname.startsWith("/school") ? "on" : ""}>School portal</Link>
             {shopEnabled && (
               <>
                 <Link to="/shop" className={pathname === "/shop" ? "on" : ""}>Shop</Link>

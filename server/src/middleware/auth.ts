@@ -59,3 +59,20 @@ export const requirePermission = (area: Area, level: Level) => (req: Request, re
   if (!can(req.user, area, level)) return res.status(403).json({ error: `You don't have permission to ${level} ${area}` });
   next();
 };
+
+// School portal: a school administrator signed in with their email and password. Tokens are checked against the
+// school row so a password change (which bumps sessions_valid_after) signs the school out everywhere.
+export const requireSchool = async (req: Request, res: Response, next: NextFunction) => {
+  const token = bearer(req);
+  if (!token) return res.status(401).json({ error: 'Missing or invalid authorization header' });
+  const user = verifyToken(token, 'school');
+  if (!user) return res.status(401).json({ error: 'Invalid or expired token' });
+  const { rows } = await pool.query(
+    `SELECT name, status, floor(extract(epoch FROM sessions_valid_after))::bigint AS valid_after FROM schools WHERE id = $1`,
+    [user.id]
+  );
+  const r = rows[0];
+  if (!r || r.status === 'cancelled' || user.iat < r.valid_after) return res.status(401).json({ error: 'Invalid or expired token' });
+  req.school = { id: user.id, name: r.name, email: user.email };
+  next();
+};
