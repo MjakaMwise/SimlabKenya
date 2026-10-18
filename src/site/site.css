@@ -686,3 +686,39 @@
 .sl .shoplink:hover,.sl .shoplink.on{background:var(--panel2);color:var(--brand)}
 .sl .sn-foot{display:grid;gap:10px}
 .sl .sn-foot .btn{justify-content:center;width:100%}
+
+/* ---- registration types and school portal ---- */
+.sl input[type=password],.sl input[type=number],.sl select{font:inherit;font-size:1rem;letter-spacing:0;text-transform:none;color:var(--ink);background:var(--panel);border:1.5px solid var(--line);border-radius:2px;padding:12px 14px;width:100%;min-width:0}
+.sl .reg-tabs{margin:0 0 10px;justify-content:flex-start}
+.sl .reg-sub,.sl .reg-note{color:var(--dim);margin-bottom:20px;max-width:62ch}
+.sl .reg-note{margin-bottom:0}
+.sl .reg-note code{font-family:var(--mono);font-size:.8rem;overflow-wrap:anywhere}
+.sl .reg-actions{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center}
+.sl .reg-alt{color:var(--dim);font-size:.92rem}.sl .reg-alt a{color:var(--brand);font-weight:600}
+.sl .portal{display:grid;gap:24px}
+.sl .portal-top{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.sl .portal-card{padding:20px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel2);display:grid;gap:6px;align-content:start}
+.sl .portal-card h3{font-size:1.8rem;color:var(--head)}
+.sl .portal-card p{color:var(--dim);font-size:.92rem;overflow-wrap:anywhere}
+.sl .pill{display:inline-block;padding:2px 14px;border-radius:99px;font-size:1rem;font-weight:700;text-transform:capitalize;background:var(--line);color:var(--ink)}
+.sl .pill-confirmed{background:#d6f2e0;color:#0d5a2b}.sl .pill-pending{background:#fdf0c4;color:#6b4e00}
+.sl .pill-waitlisted{background:#d8eaf8;color:#0d4f7a}.sl .pill-cancelled{background:#f8d9d9;color:#8a1c1c}
+.sl .portal-bar{display:flex;flex-wrap:wrap;gap:10px}
+.sl .portal-bar .btn{min-height:44px;padding:0 18px;font-size:.88rem}
+.sl .portal-panel{padding:22px;border:1.5px solid var(--line);border-radius:10px;display:grid;gap:14px}
+.sl .portal-list{display:grid;gap:10px}
+.sl .portal-search input{max-width:360px}
+.sl .portal-empty{padding:28px 0;color:var(--dim);text-align:center}
+.sl .student{display:flex;flex-wrap:wrap;gap:12px 20px;justify-content:space-between;align-items:center;padding:14px 16px;border:1.5px solid var(--line);border-radius:10px}
+.sl .student>form{flex:1 1 100%}
+.sl .student-main{display:grid;gap:2px;min-width:0;flex:1 1 280px}
+.sl .student-main span{color:var(--dim);font-size:.9rem;overflow-wrap:anywhere}
+.sl .student-actions{display:flex;gap:8px}
+.sl .student-actions .btn{min-height:40px;padding:0 16px;font-size:.84rem}
+
+/* ---- minimal header: logo, centred name, menu button ---- */
+.sl .nav{display:grid;grid-template-columns:1fr auto 1fr;justify-content:normal}
+.sl .nav .tools{justify-self:end}
+.sl .brand-logo{justify-self:start;display:block;line-height:0}
+.sl .brand-logo img{width:44px;height:44px;border-radius:50%;background:#fff;object-fit:contain}
+.sl .brand-name{font-family:var(--display);font-weight:700;font-size:1.3rem;letter-spacing:.02em;color:var(--head);text-decoration:none}

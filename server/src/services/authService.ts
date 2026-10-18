@@ -29,12 +29,12 @@ export const hashOtp = (code: string): string =>
 // ── Tokens ────────────────────────────────────────────────────────────────────
 // "pending": password was correct, waiting for the emailed code (10 min).
 // "session": fully authenticated (8 h).
-export type TokenPurpose = 'pending' | 'session';
+export type TokenPurpose = 'pending' | 'session' | 'school';
 
 export const signToken = (admin: { id: string; email: string }, purpose: TokenPurpose): string =>
   jwt.sign({ email: admin.email, purpose }, secret!, {
     subject: admin.id,
-    expiresIn: purpose === 'pending' ? '10m' : '8h',
+    expiresIn: purpose === 'pending' ? '10m' : purpose === 'school' ? '12h' : '8h',
   });
 
 export const verifyToken = (token: string, purpose: TokenPurpose): { id: string; email: string; iat: number } | null => {

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { CartProvider } from "@/hooks/useCart";
 import { AdminAuthProvider } from "@/hooks/useAdminAuth";
+import { SchoolAuthProvider } from "@/hooks/useSchoolAuth";
 import ProtectedRoute from "@/components/admin/ProtectedRoute";
 
 // Public Pages (new SIM-Lab design)
@@ -15,6 +16,8 @@ import About from "./pages/About";
 import Programs from "./pages/Programs";
 import OceanShujaa from "./pages/OceanShujaa";
 import OceanShujaaRegistration from "./pages/OceanShujaaRegistration";
+import SchoolLogin from "./pages/school/SchoolLogin";
+import SchoolPortal from "./pages/school/SchoolPortal";
 import Gallery from "./pages/Gallery";
 import FAQ from "./pages/FAQ";
 import Contact from "./pages/Contact";
@@ -35,6 +38,7 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminAbstracts from "./pages/admin/AdminAbstracts";
 import AdminAbstractDetail from "./pages/admin/AdminAbstractDetail";
 import AdminOceanShujaa from "./pages/admin/AdminOceanShujaa";
+import AdminSchools from "./pages/admin/AdminSchools";
 import AdminStaff from "./pages/admin/AdminStaff";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminTeam from "./pages/admin/AdminTeam";
@@ -44,6 +48,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AdminAuthProvider>
+      <SchoolAuthProvider>
       <CartProvider>
         <TooltipProvider>
           <Toaster />
@@ -58,6 +63,8 @@ const App = () => (
                 <Route path="/programs" element={<Programs />} />
                 <Route path="/oceanshujaa" element={<OceanShujaa />} />
                 <Route path="/oceanshujaaregistration" element={<OceanShujaaRegistration />} />
+                <Route path="/school/login" element={<SchoolLogin />} />
+                <Route path="/school/portal" element={<SchoolPortal />} />
                 <Route path="/gallery" element={<Gallery />} />
                 <Route path="/faq" element={<FAQ />} />
                 <Route path="/contact" element={<Contact />} />
@@ -131,6 +138,14 @@ const App = () => (
                 }
               />
               <Route
+                path="/admin/schools"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AdminSchools />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/admin/staff"
                 element={
                   <ProtectedRoute adminOnly>
@@ -161,6 +176,7 @@ const App = () => (
           </BrowserRouter>
         </TooltipProvider>
       </CartProvider>
+      </SchoolAuthProvider>
     </AdminAuthProvider>
   </QueryClientProvider>
 );

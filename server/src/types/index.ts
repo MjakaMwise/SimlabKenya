@@ -116,6 +116,8 @@ declare global {
         role: 'admin' | 'staff';
         permissions: string[];
       };
+      /** Set by requireSchool: the signed-in school administrator. */
+      school?: { id: string; name: string; email: string };
     }
   }
 }

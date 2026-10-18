@@ -16,6 +16,7 @@ const createSchema = z.object({
   guardianPhone: z.string().trim().min(7).max(25).regex(/^[0-9+\-()\s]+$/, 'Invalid phone number'),
   guardianEmail: z.string().trim().email().max(160),
   groupSize: z.coerce.number().int().min(1).max(500).default(1),
+  registrationType: z.enum(['individual', 'group']).default('individual'),
   notes: z.string().trim().max(2000).optional().nullable(),
   website: z.string().max(0).optional(), // honeypot: real users leave this empty
 });
@@ -29,7 +30,7 @@ const updateSchema = z
 
 const COLUMNS = `id, participant_name AS "participantName", participant_age AS "participantAge",
   level, institution, guardian_name AS "guardianName", guardian_phone AS "guardianPhone",
-  guardian_email AS "guardianEmail", group_size AS "groupSize", notes, status,
+  guardian_email AS "guardianEmail", group_size AS "groupSize", registration_type AS "registrationType", notes, status,
   admin_notes AS "adminNotes", created_at AS "createdAt", updated_at AS "updatedAt"`;
 
 const isUuid = (v: string) => /^[0-9a-f-]{36}$/i.test(v);
@@ -47,10 +48,10 @@ export const createRegistration = async (req: Request, res: Response) => {
   const { rows: created } = await pool.query(
     `INSERT INTO ocean_shujaa_registrations
        (participant_name, participant_age, level, institution, guardian_name,
-        guardian_phone, guardian_email, group_size, notes)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+        guardian_phone, guardian_email, group_size, notes, registration_type)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
     [d.participantName, d.participantAge ?? null, d.level, d.institution, d.guardianName,
-     d.guardianPhone, d.guardianEmail, d.groupSize, d.notes || null]
+     d.guardianPhone, d.guardianEmail, d.groupSize, d.notes || null, d.registrationType]
   );
   postEvent('ocean-shujaa',
     `New registration: ${d.participantName}, ${d.institution} (${d.groupSize} ${d.groupSize === 1 ? 'participant' : 'participants'})`,
@@ -145,7 +146,7 @@ export const deleteRegistration = async (req: Request, res: Response) => {
 export const exportCsv = async (_req: Request, res: Response) => {
   const { rows } = await pool.query(`SELECT ${COLUMNS} FROM ocean_shujaa_registrations ORDER BY created_at DESC`);
   const headers = ['createdAt', 'status', 'participantName', 'participantAge', 'level', 'institution',
-    'guardianName', 'guardianPhone', 'guardianEmail', 'groupSize', 'notes', 'adminNotes'];
+    'guardianName', 'guardianPhone', 'guardianEmail', 'groupSize', 'registrationType', 'notes', 'adminNotes'];
   // Prefix formula-triggering characters so spreadsheets don't execute user input.
   const cell = (v: unknown) => {
     let s = v instanceof Date ? v.toISOString() : v == null ? '' : String(v);
