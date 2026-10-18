@@ -16,6 +16,8 @@ import {
     Users,
     Download,
     School,
+    MessageCircle,
+    Mail,
 } from "lucide-react";
 import { useAdminAuth, Area } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
@@ -30,7 +32,9 @@ const navItems: NavItem[] = [
     { label: "Orders", href: "/admin/orders", icon: ShoppingCart, area: "orders" },
     { label: "Products", href: "/admin/products", icon: Package, area: "shop" },
     { label: "Abstracts", href: "/admin/abstracts", icon: FileText, area: "abstracts" },
-    { label: "Ocean Shujaa", href: "/admin/ocean-shujaa", icon: Waves, adminOnly: true },
+    { label: "Ocean Shujaa", href: "/admin/ocean-shujaa", icon: Waves, area: "ocean" },
+    { label: "WhatsApp", href: "/admin/whatsapp", icon: MessageCircle, area: "whatsapp" },
+    { label: "Email", href: "/admin/email", icon: Mail, area: "email" },
     { label: "Schools", href: "/admin/schools", icon: School, adminOnly: true },
     { label: "Staff", href: "/admin/staff", icon: Users, adminOnly: true },
     { label: "Settings", href: "/admin/settings", icon: Settings },

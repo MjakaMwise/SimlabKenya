@@ -40,6 +40,9 @@ import AdminAbstractDetail from "./pages/admin/AdminAbstractDetail";
 import AdminOceanShujaa from "./pages/admin/AdminOceanShujaa";
 import AdminSchools from "./pages/admin/AdminSchools";
 import AdminStaff from "./pages/admin/AdminStaff";
+import AdminEmail from "./pages/admin/AdminEmail";
+import AdminWhatsApp from "./pages/admin/AdminWhatsApp";
+import AdminWhatsAppSetup from "./pages/admin/AdminWhatsAppSetup";
 import AdminSettings from "./pages/admin/AdminSettings";
 import AdminTeam from "./pages/admin/AdminTeam";
 
@@ -133,7 +136,7 @@ const App = () => (
               <Route
                 path="/admin/ocean-shujaa"
                 element={
-                  <ProtectedRoute adminOnly>
+                  <ProtectedRoute area="ocean">
                     <AdminOceanShujaa />
                   </ProtectedRoute>
                 }
@@ -151,6 +154,30 @@ const App = () => (
                 element={
                   <ProtectedRoute adminOnly>
                     <AdminStaff />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/whatsapp"
+                element={
+                  <ProtectedRoute area="whatsapp">
+                    <AdminWhatsApp />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/whatsapp/setup"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <AdminWhatsAppSetup />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/email"
+                element={
+                  <ProtectedRoute area="email">
+                    <AdminEmail />
                   </ProtectedRoute>
                 }
               />

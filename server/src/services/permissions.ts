@@ -1,5 +1,5 @@
 // Staff are delegated access per area. "manage" includes "view". Admins can do everything.
-export const AREAS = ['orders', 'abstracts', 'shop'] as const;
+export const AREAS = ['orders', 'abstracts', 'shop', 'ocean', 'whatsapp', 'email'] as const;
 export type Area = (typeof AREAS)[number];
 export type Level = 'view' | 'manage';
 

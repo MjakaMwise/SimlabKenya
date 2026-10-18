@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
-import { Search, Loader2, AlertCircle, RefreshCw, Download, Trash2, Save } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Search, Loader2, AlertCircle, RefreshCw, Download, Trash2, Save, MessageCircle, Mail } from "lucide-react";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
@@ -33,7 +34,8 @@ const levelLabel = (l: string) => l.replace(/_/g, " ");
 const BASE = "/api/ocean-shujaa/admin";
 
 const AdminOceanShujaa = () => {
-    const { token } = useAdminAuth();
+    const { token, can } = useAdminAuth();
+    const canManage = can("ocean", "manage");
     const [rows, setRows] = useState<Registration[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [fetchError, setFetchError] = useState<string | null>(null);
@@ -220,7 +222,15 @@ const AdminOceanShujaa = () => {
                                             {r.notes && <p><span className="text-muted-foreground">Their note:</span> {r.notes}</p>}
                                         </div>
                                         <div className="space-y-3">
-                                            <Select value={r.status} onValueChange={(v) => patch(r.id, { status: v })} disabled={busyId === r.id}>
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button size="sm" variant="outline" asChild>
+                                                    <Link to={`/admin/whatsapp?phone=${encodeURIComponent(r.guardianPhone)}&name=${encodeURIComponent(r.guardianName)}`}><MessageCircle className="w-4 h-4" /> WhatsApp guardian</Link>
+                                                </Button>
+                                                <Button size="sm" variant="outline" asChild>
+                                                    <Link to={`/admin/email?to=${encodeURIComponent(r.guardianEmail)}&name=${encodeURIComponent(r.guardianName)}`}><Mail className="w-4 h-4" /> Email guardian</Link>
+                                                </Button>
+                                            </div>
+                                            <Select value={r.status} onValueChange={(v) => patch(r.id, { status: v })} disabled={busyId === r.id || !canManage}>
                                                 <SelectTrigger><SelectValue /></SelectTrigger>
                                                 <SelectContent>
                                                     {STATUSES.map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
@@ -229,18 +239,19 @@ const AdminOceanShujaa = () => {
                                             <textarea
                                                 className="w-full border rounded-md p-2 text-sm min-h-[80px]"
                                                 placeholder="Admin notes (private)"
+                                                disabled={!canManage}
                                                 maxLength={2000}
                                                 value={noteDraft}
                                                 onChange={(e) => setNoteDraft(e.target.value)}
                                             />
-                                            <div className="flex gap-2">
+                                            {canManage && <div className="flex gap-2">
                                                 <Button size="sm" disabled={busyId === r.id} onClick={() => patch(r.id, { adminNotes: noteDraft })}>
                                                     <Save className="w-4 h-4" /> Save notes
                                                 </Button>
                                                 <Button size="sm" variant="destructive" disabled={busyId === r.id} onClick={() => remove(r)}>
                                                     <Trash2 className="w-4 h-4" /> Delete
                                                 </Button>
-                                            </div>
+                                            </div>}
                                         </div>
                                     </div>
                                 )}
