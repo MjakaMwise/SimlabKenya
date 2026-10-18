@@ -62,7 +62,6 @@ const App = () => (
                 <Route path="/about" element={<About />} />
                 <Route path="/programs" element={<Programs />} />
                 <Route path="/oceanshujaa" element={<OceanShujaa />} />
-                <Route path="/oceanshujaaregistration" element={<OceanShujaaRegistration />} />
                 <Route path="/school/login" element={<SchoolLogin />} />
                 <Route path="/school/portal" element={<SchoolPortal />} />
                 <Route path="/gallery" element={<Gallery />} />
@@ -75,6 +74,8 @@ const App = () => (
               <Route path="/checkout" element={<ShopGate><Checkout /></ShopGate>} />
               <Route path="/order-confirmation" element={<ShopGate><OrderConfirmation /></ShopGate>} />
               </Route>
+              {/* full-page, one-question-at-a-time registration */}
+              <Route path="/oceanshujaaregistration" element={<OceanShujaaRegistration />} />
               {/* older links */}
               <Route path="/holiday-program" element={<Navigate to="/oceanshujaa" replace />} />
               <Route path="/ocean-shujaa" element={<Navigate to="/oceanshujaa" replace />} />
