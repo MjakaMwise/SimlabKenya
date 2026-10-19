@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
-export type Area = "orders" | "abstracts" | "shop" | "ocean" | "whatsapp" | "email";
+export type Area = "orders" | "abstracts" | "shop" | "ocean" | "whatsapp" | "email" | "chat";
 export type Level = "view" | "manage";
 
 interface AdminUser {

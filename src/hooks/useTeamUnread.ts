@@ -3,10 +3,11 @@ import { useAdminAuth } from "./useAdminAuth";
 
 /** Unread chat messages plus open tasks for the signed-in person, refreshed every 30 seconds. */
 export const useTeamUnread = () => {
-    const { token } = useAdminAuth();
+    const { token, can } = useAdminAuth();
+    const allowed = can("chat", "view");
     const [count, setCount] = useState(0);
     useEffect(() => {
-        if (!token) return;
+        if (!token || !allowed) return;
         let stop = false;
         const load = () =>
             fetch("/api/chat/channels", { headers: { Authorization: `Bearer ${token}` } })
@@ -16,6 +17,6 @@ export const useTeamUnread = () => {
         load();
         const t = setInterval(load, 30000);
         return () => { stop = true; clearInterval(t); };
-    }, [token]);
+    }, [token, allowed]);
     return count;
 };

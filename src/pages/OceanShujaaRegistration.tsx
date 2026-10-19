@@ -130,11 +130,14 @@ const OceanShujaaRegistration = () => {
   const progress = done ? 100 : (pos / total) * 100;
   const set = (v: string) => { setError(null); setAnswers((a) => ({ ...a, [step!.id]: v })); };
 
+  // Straight to the program page; history is empty when the form was opened from a shared link.
+  const leave = () => { if (window.history.state?.idx > 0) navigate(-1); else navigate("/oceanshujaa"); };
+
   const back = () => {
     setError(null);
     if (i > 0) setI(i - 1);
     else if (kind && !preset) setKind(null);
-    else navigate(-1);
+    else leave();
   };
 
   const submit = async (all: Record<string, string>) => {
@@ -205,7 +208,7 @@ const OceanShujaaRegistration = () => {
           <button type="button" className="rw-link" onClick={back} aria-label="Go back">← Back</button>
         ) : <span />}
         <Link to="/" className="rw-brand"><img src={IMG.logo} alt="" /><b>SIM-Lab</b></Link>
-        <Link to="/" className="rw-link" aria-label="Close registration">✕</Link>
+        <button type="button" className="rw-link" onClick={leave} aria-label="Close registration">✕</button>
       </header>
 
       <main className="rw-main">
@@ -261,7 +264,7 @@ const OceanShujaaRegistration = () => {
             {error && <p className="rw-error" role="alert">{error}</p>}
 
             {/* spam trap: real people never see or fill this */}
-            <div className="hp" aria-hidden="true"><label>Leave empty<input type="text" tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)} /></label></div>
+            <div className="hp" aria-hidden="true" style={{ position: "absolute", left: "-9999px", width: 1, height: 1, overflow: "hidden", opacity: 0, pointerEvents: "none" }}><label>Leave empty<input type="text" tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)} /></label></div>
 
             <div className="rw-actions">
               {step!.type === "choice" && !last ? <span /> : (

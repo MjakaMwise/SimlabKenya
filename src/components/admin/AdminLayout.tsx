@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
+    ArrowLeft,
     LayoutDashboard,
     ShoppingCart,
     Package,
@@ -28,7 +29,7 @@ import logo from "@/assets/logo.jpeg";
 type NavItem = { label: string; href: string; icon: typeof Users; area?: Area; adminOnly?: boolean };
 const navItems: NavItem[] = [
     { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-    { label: "Team", href: "/admin/team", icon: MessagesSquare },
+    { label: "Team", href: "/admin/team", icon: MessagesSquare, area: "chat" },
     { label: "Orders", href: "/admin/orders", icon: ShoppingCart, area: "orders" },
     { label: "Products", href: "/admin/products", icon: Package, area: "shop" },
     { label: "Abstracts", href: "/admin/abstracts", icon: FileText, area: "abstracts" },
@@ -51,6 +52,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     const visibleNav = navItems.filter((i) => (i.adminOnly ? isFullAdmin : i.area ? can(i.area, "view") : true));
     const location = useLocation();
     const teamUnread = useTeamUnread();
+    // The Team chat takes the whole screen: no side menu, just a way back to the dashboard.
+    const focused = location.pathname.startsWith("/admin/team");
     useAdminManifest();
     const { canInstall, install } = useInstallPrompt();
     const onPath = (href: string) => (href === "/admin" ? location.pathname === "/admin" : location.pathname.startsWith(href));
@@ -65,18 +68,39 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
         await signOut();
     };
 
+    if (focused) {
+        return (
+            <div className="fixed inset-0 z-40 bg-white flex flex-col pt-[env(safe-area-inset-top)]">
+                <div className="h-12 shrink-0 flex items-center gap-2 px-2 border-b">
+                    <Link to="/admin" className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-100" aria-label="Back to dashboard">
+                        <ArrowLeft className="w-5 h-5" /> Back
+                    </Link>
+                    <img src={logo} alt="" className="h-7 w-7 rounded-full" />
+                    <span className="font-heading font-bold text-primary">Team Desk</span>
+                </div>
+                <div className="flex-1 min-h-0">{children}</div>
+            </div>
+        );
+    }
+
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Mobile Header */}
             <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b z-40 h-16 flex items-center justify-between px-4 pt-[env(safe-area-inset-top)] box-content">
                 <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => setIsSidebarOpen(true)}
-                        className="p-2 hover:bg-gray-100 rounded-lg"
-                        aria-label="Open menu"
-                    >
-                        <Menu className="w-6 h-6" />
-                    </button>
+                    {focused ? (
+                        <Link to="/admin" className="p-2 hover:bg-gray-100 rounded-lg" aria-label="Back to dashboard">
+                            <ArrowLeft className="w-6 h-6" />
+                        </Link>
+                    ) : (
+                        <button
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="p-2 hover:bg-gray-100 rounded-lg"
+                            aria-label="Open menu"
+                        >
+                            <Menu className="w-6 h-6" />
+                        </button>
+                    )}
                     <img src={logo} alt="SIM-Lab" className="h-8 w-8 rounded-full" />
                     <span className="font-heading font-bold text-primary truncate">{pageTitle}</span>
                 </div>
@@ -116,7 +140,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
 
             {/* Mobile Sidebar Overlay */}
             <AnimatePresence>
-                {isSidebarOpen && (
+                {isSidebarOpen && !focused && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -128,8 +152,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
             </AnimatePresence>
 
             {/* Sidebar */}
-            <aside
-                className={`fixed top-0 left-0 h-full w-64 bg-white border-r z-50 transform transition-transform lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+            {!focused && <aside
+                className={`fixed top-0 left-0 h-full w-64 bg-white border-r z-50 flex flex-col transform transition-transform lg:translate-x-0 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"
                     }`}
             >
                 <div className="flex items-center justify-between p-4 border-b">
@@ -148,7 +172,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                     </button>
                 </div>
 
-                <nav className="p-4 space-y-1">
+                <nav className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-4 space-y-1">
                     {visibleNav.map((item) => {
                         const isActive =
                             item.href === "/admin"
@@ -175,7 +199,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                     })}
                 </nav>
 
-                <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-gray-50">
+                <div className="shrink-0 p-4 border-t bg-gray-50">
                     <div className="flex items-center gap-3 mb-3">
                         <div className="w-10 h-10 bg-primary text-primary-foreground rounded-full flex items-center justify-center text-sm font-bold">
                             {user?.email?.charAt(0).toUpperCase()}
@@ -199,15 +223,22 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                         <LogOut className="w-4 h-4" /> Sign Out
                     </Button>
                 </div>
-            </aside>
+            </aside>}
 
             {/* Main Content */}
-            <main className="lg:ml-64 min-h-screen pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0">
-                <div className="p-4 lg:p-8">{children}</div>
+            <main className={`${focused ? "" : "lg:ml-64"} min-h-screen pt-[calc(4rem+env(safe-area-inset-top))] lg:pt-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0`}>
+                <div className="p-4 lg:p-8">
+                    {focused && (
+                        <Link to="/admin" className="hidden lg:inline-flex items-center gap-2 mb-4 text-sm font-medium text-gray-600 hover:text-primary">
+                            <ArrowLeft className="w-4 h-4" /> Back to dashboard
+                        </Link>
+                    )}
+                    {children}
+                </div>
             </main>
 
             {/* Phone tab bar */}
-            <nav aria-label="Quick links" className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t grid pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${tabs.length + 1}, minmax(0, 1fr))` }}>
+            <nav aria-label="Quick links" className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t grid pb-[env(safe-area-inset-bottom)]" style={{ gridTemplateColumns: `repeat(${tabs.length + (focused ? 0 : 1)}, minmax(0, 1fr))` }}>
                 {tabs.map((item) => {
                     const Icon = item.icon;
                     const active = onPath(item.href);
@@ -221,10 +252,10 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
                         </Link>
                     );
                 })}
-                <button onClick={() => setIsSidebarOpen(true)} className="flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-gray-500">
+                {!focused && <button onClick={() => setIsSidebarOpen(true)} className="flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-gray-500">
                     <Menu className="w-5 h-5" />
                     More
-                </button>
+                </button>}
             </nav>
         </div>
     );

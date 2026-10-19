@@ -28,6 +28,7 @@ const AREAS: [string, string][] = [
     ["ocean", "Ocean Shujaa"],
     ["whatsapp", "WhatsApp inbox"],
     ["email", "Email"],
+    ["chat", "Team chat"],
 ];
 
 const accessOf = (perms: string[], area: string): Access =>
