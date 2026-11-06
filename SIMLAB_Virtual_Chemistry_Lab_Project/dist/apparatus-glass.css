@@ -1,0 +1,11 @@
+/* Bounded apparatus prototype; no global interface restyling. */
+.scientific-glass{overflow:visible;shape-rendering:geometricPrecision}
+.scientific-glass .sci-bubbles,.scientific-glass .sci-condensate{display:none}
+.boiling .scientific-glass .sci-bubbles,.distilling .scientific-glass .sci-condensate{display:block}
+.boiling .scientific-glass .sci-bubble{animation:sci-rise 2.2s ease-in infinite;transform-box:fill-box;transform-origin:center}
+.distilling .scientific-glass .sci-drop{animation:sci-condense 2s ease-in-out infinite}
+.scientific-glass .sci-b1{animation-delay:-.4s!important}.scientific-glass .sci-b2{animation-delay:-1.2s!important}.scientific-glass .sci-b3{animation-delay:-.8s!important}.scientific-glass .sci-b4{animation-delay:-1.7s!important}
+@keyframes sci-rise{0%{transform:translateY(3px) scale(.6);opacity:0}25%{opacity:.9}100%{transform:translateY(-13px) scale(1.2);opacity:0}}
+@keyframes sci-condense{0%{opacity:0;transform:translateX(-2px)}30%{opacity:.85}100%{opacity:0;transform:translateX(3px)}}
+@media(prefers-reduced-motion:reduce){.scientific-glass .sci-bubble,.scientific-glass .sci-drop{animation:none!important;opacity:.7}}
+.scientific-glass .bench-ppt-particles{animation:sci-settle .9s ease-out both;transform-box:fill-box;transform-origin:center}@keyframes sci-settle{from{opacity:.25;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}@media(prefers-reduced-motion:reduce){.scientific-glass .bench-ppt-particles{animation:none}}

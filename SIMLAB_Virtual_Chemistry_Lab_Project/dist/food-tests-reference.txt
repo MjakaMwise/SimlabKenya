@@ -1,0 +1,81 @@
+SIMLAB food tests and red-cabbage indicator
+
+Use separate fresh aliquots for Benedict, iodine, Biuret and lipid testing.
+The added food stocks are ideal reference materials, not branded foods.
+Glucose, fructose, maltose and lactose are reducing-sugar references;
+sucrose is the non-reducing reference. Starch and albumin are standardized
+mass-concentration reference preparations; vegetable oil is a model mixture.
+Benedict and Biuret are premixed formulations, so one molarity does not
+describe the complete reagent. Sugar stock molarity remains user-editable.
+
+Benedict: an interpretable result requires heating an alkaline mixture.
+Reducing activity produces Cu2O solid; residual Cu(II) can remain blue.
+The green/yellow/orange/brick-red teaching scale uses a nominal 0.07 mol/L
+Cu(II) reagent and reducing equivalents. It is not a validated calibration,
+limit-of-detection model, or proof that a particular sugar is present.
+Fructose responds through alkaline isomerisation. Non-sugar reducing agents
+can also interfere in real food extracts.
+
+Non-reducing sugar: compare negative untreated sucrose with a positive
+fresh hydrolysate. The model requires acid plus heating, cooling and
+neutralisation BEFORE Benedict is added, then a second heating step.
+A negative untreated result alone does not identify a non-reducing sugar.
+Hydrolysis is treated as complete after the designated virtual treatment;
+no rate law, catalytic acid dependence, side degradation or quantitative
+hydrolysis yield is claimed. The hydrolyzed state travels with aliquots.
+
+Water bath: warming to 90 C and a 180-second hot hold at >=80 C run on an
+accelerated teaching clock. The standard apparatus heater also supports
+this accelerated hold. These are simulator settings, not a universal lab
+method or a prediction of actual reaction time. Cool samples before
+neutralisation and interpretation. Organic solvent samples are excluded.
+
+Biuret: a violet Cu(II)-peptide complex indicates peptide groups in the
+albumin reference. Blue is the negative reference. No solid or gas is formed.
+The premixed reagent supplies alkaline conditions. No heating is required.
+
+Iodine: blue-black starch/polyiodide inclusion colour; it is not a solid
+precipitate. The colour may weaken on heating and should be read after
+cooling. A yellow-brown result is negative for starch in these reference
+samples, not proof that no carbohydrate is present.
+
+Lipid emulsion: first prepare the oil/ethanol extract; then transfer it
+into water. White cloudiness is a physical dispersion of lipid droplets,
+not a precipitate or a chemical reaction. Water/ethanol alone stays clear.
+An oil layer or pre-existing cloudiness is not the developed test endpoint.
+Extraction efficiency, phase volume, droplet size and emulsion stability
+are not calculated quantitatively.
+
+Anthocyanins: red-cabbage pigments change forms with pH. The displayed
+colour anchors run red/pink in acid, purple/violet near neutral, then blue,
+green and yellow at increasing alkalinity. Shades are approximate and
+depend on extraction, pigment concentration, temperature, age and time.
+Strong-alkali degradation and photobleaching are not simulated. Reference
+buffers have assigned pH; their capacity is not computed. Simple acid/base
+mixtures use ideal 25 C charge balance, including weak acid/base and
+carbonate equilibria; CO2 loss and activity coefficients are ignored.
+Food matrices with uncharacterized buffering do not receive an invented pH.
+
+Sources
+AQA GCSE Biology Practical Handbook: food tests, interpretation and controls:
+https://filestore.aqa.org.uk/resources/biology/AQA-8461-PRACTICALS-HB.PDF
+
+Pearson Edexcel International GCSE Biology sample lab book: food tests,
+including Biuret, iodine and sequential ethanol-emulsion procedure:
+https://www.pearson.com/content/dam/one-dot-com/one-dot-com/international-schools/pdfs/secondary-curriculum/international-gcse/science/IGBiologyLabBooksample.pdf
+
+Ministry of Education, Saint Lucia: Biology Students Manual, experiment 12,
+non-reducing sugar test (hydrolysis, neutralisation, then Benedict):
+https://camdu.edu.lc/wp-content/uploads/2017/10/Biology-Students-Manual-Part-2-of-4.pdf
+
+CLEAPSS GL018 Food tests: coverage of established food-test methods:
+https://science.cleapss.org.uk/Resource-Info/GL018-Food-tests.aspx
+
+American Chemical Society: Red Cabbage Indicator:
+https://www.acs.org/education/activities/red-cabbage-indicator.html
+
+Royal Society of Chemistry: Rainbow Cabbage (approximate colour scale):
+https://edu.rsc.org/download?ac=512305
+
+All equations, colour renderings and inferences are educational models;
+they are not experimental measurements or confirmatory analysis of a real food.

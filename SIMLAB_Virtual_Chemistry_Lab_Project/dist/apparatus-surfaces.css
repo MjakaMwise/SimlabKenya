@@ -1,0 +1,29 @@
+/* Approved apparatus finish only: no page layout, controls or chemistry overrides. */
+.flask-neck{border-color:#7e9eaf;background:linear-gradient(90deg,#63879b38,#f5fdffa1 18%,#e4f3f60a 48%,#e9faff80 84%,#6486974d);box-shadow:inset 1px 0 #fff9,2px 1px 2px #28445412}
+.flask-body{border-color:#7e9eaf;border-width:1.5px;background:linear-gradient(90deg,#5f879b44,#f2fcff80 12%,transparent 29% 67%,#f1fcff6b 89%,#577f9438),linear-gradient(to top,var(--liquid,#edf4f2) 0 47%,transparent 47%);box-shadow:inset 2px -3px 5px #577c8d1a,2px 4px 5px #304d5e12}
+.flask-body:after{border-color:#e5f6fc;box-shadow:0 1px 0 #6d93a94d}
+.qual-jar{border:1.5px solid #7c9dae;border-top:0;background:linear-gradient(90deg,#537e9645,#eafaff80 13%,transparent 30% 72%,#f5fcff80 89%,#507a9140),linear-gradient(0deg,#b9e2d272 0 48%,#fff1 49%);box-shadow:inset 1px 0 #fff9,inset -2px -4px 7px #527e9424,3px 6px 10px #29495d14}
+.qual-jar:before{border:1px solid #80a0b3;background:linear-gradient(90deg,#8baebe66,#f1fcffcc 18%,#d1e5ed33 60%,#dff6ffb3);box-shadow:0 1px 0 #fff9}
+.qual-jar:after{content:'';position:absolute;left:9%;top:9%;height:67%;width:7%;border-radius:80%;background:linear-gradient(#fff9,#fff1);pointer-events:none}
+.qual-bubbles i{box-shadow:inset 1px 1px 1px #fff9;border-color:#b2dbe5}
+.qual-precipitate i{box-shadow:inset 1px 1px 1px #fff9,0 1px 2px #4d677822}
+.grav-petri{border:1.2px solid #7f9ead;background:linear-gradient(175deg,#f7ffff66,#c3dce42b 50%,#7599ad3b);box-shadow:inset 0 3px 0 #f1fcffbd,inset 0 -5px 0 #7598ab33,inset 3px 0 6px #fff8,3px 6px 8px #213f531a}
+.grav-petri:before{content:'';position:absolute;inset:3px 5px;border:1px solid #f6fdffbd;border-bottom-color:#7e9cac6b;border-radius:50%;pointer-events:none}
+.grav-petri.loaded:after{box-shadow:inset 0 2px 4px #ffffffb3,inset 0 -2px 3px #6c634633}
+.grav-ppt-dots i{box-shadow:inset 1px 1px 1px #fff9,0 1px 1px #425b6b22}
+.ec-beaker{border:1.5px solid #7e9cad;border-top:0;background:linear-gradient(90deg,#62889e30,#f4fdff8c 14%,#d6ebf20a 37% 70%,#effbff66 91%,#6c92a638);box-shadow:inset 1px 0 #fff9,inset -2px -4px 7px #3b64791c,3px 7px 12px #324d5e12}
+.ec-beaker:before{content:'';position:absolute;z-index:4;left:0;right:0;top:0;height:5px;border:1px solid #91b1c0;border-radius:50%;background:linear-gradient(90deg,#b6d5e13b,#fff9,#a8c6d333);pointer-events:none}
+.ec-beaker:after{content:'';position:absolute;z-index:3;top:9px;bottom:12px;left:10%;width:6%;border-radius:60%;background:linear-gradient(#fff9,#fff0);pointer-events:none}
+.ec-solution{box-shadow:inset 0 2px 0 #f1fdff7d,inset 7px 0 9px #fff2,inset -5px -4px 9px #1b3e5412}
+.ec-solution:before{content:'';position:absolute;left:0;right:0;top:-3px;height:6px;border-radius:50%;border-top:1px solid #f0fbffb3;background:color-mix(in srgb,var(--solution),transparent 30%)}
+.ec-metal-strip{box-shadow:inset 1px 0 #ecf5fb99,2px 3px 5px #2334}
+.ec-plating-tank{border-color:#7e9eaf;box-shadow:inset 3px 0 9px #fff8,inset -5px -5px 12px #33536922,3px 7px 12px #324d5e12}
+.ec-voltmeter{border:1px solid #8299ab;background:linear-gradient(135deg,#405669,#203448);box-shadow:inset 0 1px #ffffff59,0 4px 7px #263a3322}
+.pc-molecule-vessel{border:1.5px solid #89a6b5;background:linear-gradient(90deg,#688fa12b,#f5fcffbd 12%,#e8f2f21a 40% 70%,#f4fdffb3 91%,#7c9ca736);box-shadow:inset 1px 1px #fff9,inset -3px -4px 9px #5b7f931a,3px 6px 9px #29495d0d}
+.pc-cylinder{border-color:#7e9dad;border-width:1.5px;background:linear-gradient(90deg,#5a83994d,#f4fdff91 16%,#d6eef31a 36% 65%,#e9fbff8c 88%,#6d96aa52);box-shadow:inset 1px 0 #fff9,inset 0 -4px 9px #456b8024,3px 6px 9px #29495d14}
+.pc-piston{background:linear-gradient(#687f94,#d8e7ef 30%,#91a8ba 55%,#526e87);border-color:#667f91;box-shadow:inset 0 1px #ffffffb3,0 3px 5px #2c435d33}
+.pc-piston span{background:linear-gradient(90deg,#5c7489,#c8dce8 35%,#7a92a6);border:1px solid #7e95a7}
+.pc-pressure-gauge{background:linear-gradient(135deg,#f8fcff,#dbe7ee);border:1px solid #8ca6b8;box-shadow:inset 0 1px #fff,2px 4px 8px #334d601f}
+.titration-apparatus{filter:drop-shadow(1px 3px 2px #26465512)}
+.scientific-apparatus{overflow:visible}
+@media(prefers-reduced-motion:reduce){.qual-bubbles i,.qual-precipitate i,.grav-steam,.ec-metal-strip,.ec-metal-strip:after,.ec-ion-float,.pc-particles i,.flask-body.gas-release:before{animation:none!important}.ec-diagram.flowing .ec-electron-track span{animation:none!important;opacity:1}}

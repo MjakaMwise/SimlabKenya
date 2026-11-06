@@ -1,0 +1,18 @@
+SIMLAB measured-transfer model
+
+Dropper: indicator stocks only in the tool popup. Load volume and delivered volume are stored separately. Number of drops must be a positive integer. A default drop volume of 0.05 mL is an illustrative assumption; the model allows 0.01–0.10 mL in 0.01 mL steps. Actual drop size depends on the liquid and dropper. This is not a calibrated volumetric measurement.
+
+Spatula: weighed dry mass is moved from a stock bottle or an existing dry sample. Stock materials are pure reference sodium chloride, anhydrous sodium carbonate, sodium bicarbonate, anhydrous glucose and sucrose. The spatula does not create or measure a liquid volume. Source mass is reduced by the amount delivered. A narrow-neck volumetric flask requires an attached funnel for the solid-transfer action.
+
+Funnel: a guide, not a storage vessel. Attach it to an upright receiver. The receiver follows the normal capacity checks. Liquid transferred through the funnel uses the normal liquid-transfer engine; measured dry-solid transfers reduce source mass and add it to the receiver. The funnel remains empty. It detaches if the receiving vessel is tilted.
+
+Dissolution and preparation: the explicit dissolve action applies only to the listed reference solids plus water, up to 1 mol/L per solute. It assumes complete dissolution in this dilute reference range and does not calculate saturation, dissolution rates, activities or volume change on dissolving. Before a volumetric preparation is made to the mark, displayed concentration is approximate, using the displayed solution volume. Remove the funnel, dissolve all solid first, then use Add distilled water to calibration mark to define the final volume. Moles n = weighed mass (g) / molar mass (g/mol); concentration C = n / final solution volume (L). Molar masses use the existing formula-mass calculator (with reference fallback values). Dissolved solid mass is carried proportionally with liquid aliquots; it is not available as dry powder to a spatula. Later additions can change concentration.
+
+Pipettes: a single-mark volumetric pipette is loaded to its rated volume and delivers that full calibrated aliquot. The graduated pipette supports measured partial transfers. A source vessel loses the volume loaded into a pipette; the pipette then loses the volume delivered into the receiving vessel. The drawing is illustrative, not a metrological calibration or tolerance model.
+
+Wash bottle: water only; delivered water adds to the receiver volume and changes dilution. It is not a calibrated volumetric measuring instrument. Rinsing does not automatically remove or recover adsorbed material, and quantitative-rinse recovery losses are not simulated.
+
+Glass rod: guides a measured liquid pour or mixes a selected vessel. It does not add material or alter the amount of solute by itself. Stirring uses the existing reaction model and does not introduce a new kinetic model.
+
+All transfers reject invalid, negative, excessive and incompatible requests before changing inventories. Empty / clean tool explicitly discards its remaining contents. Existing reaction coverage limits still apply; unknown mixtures are not assigned arbitrary products.
+Bench-linked solids: the spatula defaults to actual dry-solid inventories in vessels on the bench. Selecting a source vessel before selecting the spatula makes it the preferred source. Pick source on bench selects the same inventory by clicking its vessel. Source and receiver are separate. Stock-bottle loading requires explicitly switching Source location. Dissolved solutes and wet mixtures are excluded from dry-scoop sources. The vessel popup provides Add weighed dry solid for placing a reference solid into a beaker or other compatible dry-sample vessel.

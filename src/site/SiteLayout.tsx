@@ -123,6 +123,7 @@ export default function SiteLayout() {
               </Link>
               <Link className="brand-name" to="/">SIM-Lab</Link>
               <div className="tools">
+                <a className="virtual-lab-btn" href="https://virtual-lab.simlabkenya.co.ke">Virtual Lab</a>
                 <button className="ib" id="burger" onClick={() => setMenuOpen(true)} aria-label="Open menu" aria-expanded={menuOpen} aria-controls="sidenav"><Icon name="menu" /></button>
               </div>
             </nav>
@@ -136,6 +137,7 @@ export default function SiteLayout() {
             <button className="ib" onClick={() => setMenuOpen(false)} aria-label="Close menu"><Icon name="x" /></button>
           </div>
           <div className="sn-links">
+            <a href="https://virtual-lab.simlabkenya.co.ke">Virtual Lab</a>
             {MAIN_NAV.map(([k, l]) => (
               <span key={k} style={{ display: "contents" }}>
                 <Link to={k} className={k === pathname ? "on" : ""}>

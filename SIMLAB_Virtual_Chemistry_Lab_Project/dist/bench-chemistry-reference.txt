@@ -1,0 +1,82 @@
+SIMLAB Open Reaction Bench - chemistry model and audit
+
+Coverage
+Supported dilute aqueous rules cover acid/base neutralization, indicators,
+carbonate protonation and CO2 evolution, iodine/thiosulfate, acidified
+permanganate with peroxide/Fe(II)/iodide/oxalate, acidified peroxide/iodide,
+Fe(III)/iodide, Cu(II)/iodide, acidified thiosulfate, warmed ammonium/alkali,
+K/water, selected salt and hydroxide precipitations, Cu(II)/ammonia,
+Fe(III)/thiocyanate, and a conditional buffered EDTA/EBT illustration.
+
+The model uses explicit formulae, entered molarity and transferred volume.
+Zero concentration remains zero. Counterions include chloride from FeCl3,
+CaCl2 and NH4Cl, sulfate from soluble sulfates, and calcium from limewater.
+The simple reaction panel assumes 1 mL of each solution and 0.050 g K.
+The apparatus bench uses the amounts entered there.
+
+Precipitation: simple noncompeting pairs use ideal concentrations after
+dilution and solve Qsp = Ksp, near 25 C. Warmed cases, competing precipitates,
+acid-dependent anion speciation, and unvalidated pairs are not resolved.
+Acid is neutralized before testing hydroxide precipitation. No precipitate
+is assigned solely because the reagent has a particular category label.
+Brown silver oxide uses an explicitly labelled AgOH-equivalent threshold
+approximation; this is not a quantitative silver oxide speciation model.
+
+CuSO4/NH3: coupled Cu and ligand mass balances, charge balance, Cu(OH)2
+solubility, and tetraammine formation are solved. No fixed 4:1 switch.
+Other competing ligands are outside this model.
+
+Colour: precipitate and surrounding solution are shown separately. Excess
+permanganate remains purple; depleted permanganate loses that colour.
+Unindicated acid, base and neutralization products are colourless. Simple
+indicator colours follow modeled pH, including weak acid/base equilibria.
+Rendered shades are illustrative, not measured absorbance or a guaranteed
+visibility threshold. Fe(OH)2 aging/oxidation is described, not animated.
+
+Limitations
+This is a teaching model, not a universal reaction predictor. Unsupported
+does NOT mean no chemical reaction. Organic reaction chemistry, arbitrary
+custom chemicals, many phosphate/carbonate precipitates, competing redox
+pathways, activity corrections, buffer capacity, hydrolysis, temperature-
+dependent constants, reaction history, catalysis and rates are not fully
+resolved. Current predictions recompute from the combined starting amounts;
+they do not track a complete sequence of consumed intermediates or gases
+already lost during earlier mixing. Redox yields are eventual stoichiometric
+upper bounds; partial acidification can require a different pathway.
+
+Gases H2, O2, CO2, NH3 and SO2 are colourless. Bubble visibility is not gas
+colour. SO2 may remain dissolved; NH3 escapes more readily on warming.
+Virtual gas-collection and heating animations are qualitative.
+
+Scientific sources (reviewed 31 October 2026)
+University of British Columbia - solubility-product table, 25 C:
+https://groups.chem.ubc.ca/courseware/pH/kspdata.html
+UBC values used: AgCl 1.8e-10, AgI 8.5e-17, PbCl2 1.2e-5,
+PbI2 8.5e-9, PbSO4 1.8e-8, Fe(OH)2 4.9e-17, Fe(OH)3 2.6e-39,
+Mg(OH)2 5.6e-12, CaCO3 5.0e-9, CaSO4 7.1e-5.
+
+Purdue University - coupled Cu(II) equilibria and observations:
+https://chemed.chem.purdue.edu/demos/demosheets/18.8.html
+Cu(OH)2 Ksp 2.2e-20; Cu(NH3)4 overall formation constant 2.1e13.
+
+University of Colorado Boulder - metal/ammonia observations:
+https://www.colorado.edu/lab/lecture-demo-manual/e740-equilibrium-complex-ions-metal-ammonia-complexes
+
+University of Washington - silver precipitates, AgOH-equivalent threshold:
+https://chem.washington.edu/lecture-demos/silver-precipitates
+
+Canadian Conservation Institute - chloride test and alkaline silver oxide:
+https://www.canada.ca/en/conservation-institute/services/conservation-preservation-publications/canadian-conservation-institute-notes/test-chloride-ions-iron-treatment-silver-nitrate.html
+
+University of Waterloo - colloidal sulfur and sulfur dioxide:
+https://uwaterloo.ca/centre-advanced-science-education/news/sharing-chemistry-community-chemical-sunset
+
+University of Washington - MnO2-catalyzed peroxide decomposition:
+https://chem.washington.edu/lecture-demos/decomposition-h2o2-mno2
+
+Purdue University - permanganate/oxalate kinetics and conditions:
+https://chemed.chem.purdue.edu/demos/demosheets/22.2.html
+
+Remaining conventional teaching constants: Kw 1.0e-14, ethanoic-acid Ka
+1.75e-5, ammonium Ka 5.6e-10, HSO4- Ka2 0.012, Ca(OH)2 Ksp 5.5e-6.
+Constants vary between compilations and with temperature and ionic strength.

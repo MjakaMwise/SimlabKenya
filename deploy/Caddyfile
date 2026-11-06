@@ -26,6 +26,20 @@
 	}
 }
 
+# Serve the standalone virtual chemistry lab with automatic HTTPS.
+virtual-lab.simlabkenya.co.ke {
+	encode gzip zstd
+	root * /srv/virtual-lab
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		Cache-Control "no-cache"
+		-Server
+	}
+	file_server
+}
+
 # Redirect www to the bare domain when running with a real domain.
 www.{$SITE_DOMAIN:localhost.invalid} {
 	redir https://{$SITE_DOMAIN:localhost.invalid}{uri} permanent

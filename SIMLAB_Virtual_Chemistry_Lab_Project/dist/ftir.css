@@ -1,0 +1,20 @@
+.ftir-layout{display:grid;grid-template-columns:minmax(0,3fr) minmax(190px,1fr);gap:15px;align-items:start}
+.ftir-inspector{padding:12px;border:1px solid var(--line);border-radius:9px;background:#f4f9f6}
+#ftirProgress{width:100%;accent-color:#087e67}
+#ftirProgress[hidden]{display:none}
+@media(max-width:780px){.ftir-layout{grid-template-columns:1fr}}
+.ftir-reference-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(165px,1fr));gap:7px 12px}
+.ftir-reference-list>div,.ftir-reference-list label{display:flex;align-items:center;gap:6px}
+.ftir-reference-list label{flex:1}
+.ftir-reference-list input{width:auto}
+.ftir-reference-list i{width:14px;border-top:2px dashed;flex:none}
+.ftir-reference-list a{font-size:11px;white-space:nowrap}
+.ftir-measured{color:#08604d;font-weight:700}
+.ftir-references{margin-top:12px}
+.ftir-overlay-legend{display:flex;gap:7px 14px;flex-wrap:wrap;font-size:12px}
+.ftir-overlay-legend span{display:inline-flex;align-items:center;gap:6px}
+.ftir-overlay-legend i{width:18px;border-top:2px solid}
+.ftir-overlay-legend i.ftir-reference-key{border-top-style:dashed}
+.ftir-references [data-ftir=overlay]{margin-bottom:10px}
+.ftir-reference-list{grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr))}
+.ftir-reference-list input[type=color]{width:30px;height:28px;padding:2px;flex:none;cursor:pointer}

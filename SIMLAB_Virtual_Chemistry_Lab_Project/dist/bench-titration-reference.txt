@@ -1,0 +1,20 @@
+SIMLAB: bench preparation and acid/base analysis
+
+Measured dry solids can be moved between actual bench vessels. Dissolve and mix before sampling. For a defined concentration, make up to the final mark in a volumetric flask; solvent added alone is not final solution volume. Moles = mass / molar mass; concentration = total moles / final solution volume in litres. Transfers preserve solute mass and concentration and subtract liquid from the source. The simulation assumes reference-solid identity and purity and complete dissolution at supported concentrations up to 1 mol/L. Sodium hydroxide here is an assumed-pure model solid, not a real primary standard: real NaOH absorbs moisture and carbon dioxide and needs standardisation. No solubility or nonideal-volume model is implied.
+
+Export one supported acid/base species in water (optional inert NaCl/KCl). Competing active species, unsupported matrices and undissolved preparations are rejected. Known references require a defined stock or final-volume basis. Unknown concentration is hidden in the titration interface, but client-side simulation data are not secure examination secrets.
+
+For a A + b B reaction, with flask A and burette B:
+Analyse flask: Ca = Cb * Vb / Va * a / b.
+Standardise burette: Cb = Ca * Va / Vb * b / a.
+Each recorded run retains its aliquot, coefficients and reference concentration. Combined results divide summed unknown moles by summed corresponding unknown-solution volume. The first addition consumes one flask aliquot; cumulative titrant delivery consumes the corresponding burette bottle volume. Restart discards liquid and never refunds it. At least two recorded runs are needed to assign a calculated working standard. Users must assess concordance and exclude rough/overshot data by starting a fresh series.
+
+KHP (204.2212 g/mol) is monoprotic and reacts 1:1 with NaOH. Sodium carbonate reacts 1:2 with HCl at full neutralisation with methyl orange. Stoichiometric equivalence drives the simulation; recorded indicator endpoints can differ from equivalence. Strong-acid/strong-base colours use an ideal pH calculation. Weak-acid, KHP and carbonate colour transitions are illustrative rather than full equilibrium, gas-loss or activity calculations.
+
+Primary teaching sources:
+Columbia University, Experiment 1: volumetric preparation and KHP/NaOH standardisation:
+https://columbia.edu/cu/chemistry/ugrad/hssp/EXP_1.html
+Vanderbilt University, KHP/NaOH standardisation technique:
+https://www.vanderbilt.edu/AnS/Chemistry/courses/chem104/experiment5/tech2.htm
+University of Malaya, acid/base standardisation with sodium carbonate:
+https://chemistry.um.edu.my/img/files/expt-1-manual%281%29.pdf
