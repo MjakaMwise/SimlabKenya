@@ -1,0 +1,106 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Open+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* Shared with the main SIM-Lab Kenya website. Keep scientific sample colours
+   and instrument displays in their original, meaningful palettes. */
+:root {
+  --ink: #1a1a1a;
+  --muted: #46788a;
+  --paper: #f0f5f7;
+  --white: #fff;
+  --line: #cfdfe6;
+  --green: #0d5672;
+  --mint: #e7f2f9;
+  --lime: #fcb415;
+  --navy: #0d5672;
+  --brand: #0d5672;
+  --sea: #5dade2;
+  --gold: #fcb415;
+  --shadow: 0 10px 40px -10px rgb(13 86 114 / 20%);
+}
+
+body { font-family: 'Open Sans', system-ui, sans-serif; }
+body .app :is(button, input, select, textarea, p, small, a, span, div, label, td) {
+  font-family: 'Open Sans', system-ui, sans-serif;
+}
+body .app :is(h1, h2, h3, h4, .brand b, .btn, .nav button, .statnum, .big, .simple-number) {
+  font-family: 'Montserrat', system-ui, sans-serif;
+}
+body .app :is(.eyebrow, .navlabel, .simtag, .field label, .chip, .pill, .formula, .table th, .shelf-title) {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+body :focus-visible { outline: 3px solid var(--sea); outline-offset: 3px; }
+body .sidebar {
+  background: linear-gradient(160deg, #0d5672, #072f42);
+  border-right: 1px solid #1f6984;
+  color: #e8f2f7;
+}
+body .brand { text-decoration: none; color: #fff; padding-inline: 0; gap: 10px; }
+body .brand-logo { width: 44px; height: 44px; object-fit: contain; border-radius: 50%; background: #fff; flex-shrink: 0; }
+body .brand b { font-size: 15px; letter-spacing: -.02em; }
+body .brand small { font-size: 8px; letter-spacing: .1em; color: #c1dce8; }
+body .navlabel, body .user small { color: #abcddd; }
+body .nav button { color: #d0e4ed; font-weight: 500; }
+body .nav button:hover { background: #ffffff14; color: #fff; }
+body .nav button.active { background: #ffffff1c; color: #fff; box-shadow: inset 3px 0 var(--gold); }
+body .nav button.active .navicon { color: var(--gold); }
+body .course-card { border-color: #ffffff26; border-radius: 14px; background: #ffffff0c; }
+body .course-card small { color: #c1dce8; }
+body .avatar { background: var(--gold); color: #1a1a1a; }
+body .topbar {
+  min-height: 72px;
+  height: auto;
+  gap: 12px;
+  padding-block: 12px;
+  background: #ffffffed;
+  box-shadow: 0 4px 24px -16px #0d567244;
+}
+body .topright { flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+body .website-link { color: var(--brand); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+body .website-link:hover { text-decoration: underline; }
+body .simtag { color: var(--brand); background: #e7f2f9; border-color: var(--line); }
+body .pagehead h1 { color: var(--brand); letter-spacing: -.025em; line-height: 1.18; }
+body .eyebrow { color: var(--brand); font-weight: 600; }
+body .pagehead .eyebrow::before { content: ''; display: inline-block; width: 24px; height: 3px; background: var(--gold); margin-right: 9px; vertical-align: middle; }
+body .panel { border-radius: 16px; border-color: var(--line); }
+body .hero-main {
+  background-color: var(--brand);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='88' height='76' viewBox='0 0 88 76'%3E%3Cpath d='M22 1h44l21 37-21 37H22L1 38Z' fill='none' stroke='%235dade2' stroke-opacity='.13'/%3E%3C/svg%3E");
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+body .hero-main h2 { color: #fff; line-height: 1.18; }
+body .hero-main p { color: #d0e4ed; }
+body .hero-art { background: #e7f2f9; border-color: var(--line); border-radius: 18px; }
+body .hero-art::before, body .hero-art::after { border-color: #b2d3e4; }
+body .artlabel { color: var(--brand); }
+body .btn, body .hero-main .btn {
+  background: var(--gold);
+  color: #1a1a1a;
+  border: 2px solid var(--gold);
+  border-radius: 8px;
+  font-weight: 700;
+  box-shadow: 0 4px 20px -4px rgb(252 180 21 / 40%);
+  transition: background .2s, border-color .2s, box-shadow .2s;
+}
+body .btn:hover, body .hero-main .btn:hover { background: #ffd16b; border-color: #ffd16b; }
+body .btn.secondary { background: #fff; border: 1px solid var(--line); color: var(--brand); box-shadow: none; }
+body .btn.secondary:hover { background: #e7f2f9; border-color: var(--sea); }
+body .btn.soft { background: #e7f2f9; color: var(--brand); border-color: transparent; box-shadow: none; }
+body .module:hover { border-color: var(--sea); box-shadow: var(--shadow); }
+body .module-icon, body .statbadge { color: var(--brand); background: #e7f2f9; }
+body .sectionhead h2, body .module h3, body .workpanel h2, body .notebook h2 { color: var(--brand); }
+body .field :is(input, select):focus { border-color: var(--sea); outline: 2px solid #5dade240; }
+body .brand-footer { margin: 0 38px; padding: 22px 0; border-top: 1px dotted var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; }
+body .brand-footer a { color: var(--brand); font-family: 'Montserrat', system-ui, sans-serif; font-weight: 700; text-decoration: none; }
+@media (max-width: 1050px) and (min-width: 761px) {
+  body .brand { flex-wrap: wrap; }
+}
+@media (max-width: 760px) {
+  body .topbar { padding: 10px 16px; flex-wrap: wrap; }
+  body .topright { gap: 10px; }
+  body .brand-footer { margin-inline: 16px; }
+  body .sidebar { overflow-y: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  body .btn, body .hero-main .btn { transition: none; }
+}
