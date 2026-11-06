@@ -10,3 +10,4 @@ RUN npx vite build
 FROM caddy:2-alpine
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 COPY --from=build /app/dist /srv
+COPY SIMLAB_Virtual_Chemistry_Lab_Project/dist /srv/virtual-lab

@@ -1,0 +1,5 @@
+EI reference peak patterns: NIST Chemistry WebBook, NIST Standard Reference Database 69.
+Origin and record identifiers are retained per entry, together with public source and JCAMP links. Retrieved 2026-10-29.
+Original JCAMP collection notice: Collection (C) 2014 copyright by the U.S. Secretary of Commerce on behalf of the United States of America. All rights reserved.
+This is a small educational subset, not the commercial NIST/EPA/NIH Mass Spectral Library, and is not affiliated with or endorsed by NIST or Agilent. Relative peak intensities are normalized to 100. No uniform ionization energy is asserted where the source record does not specify it.
+Simulated companion MS traces use these reference patterns with synthetic response, background and noise. They are not conversions of FID signals, real instrument files, calibrated spectra or exact-mass measurements.

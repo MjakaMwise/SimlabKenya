@@ -9,6 +9,8 @@ lerna-debug.log*
 
 node_modules
 dist
+!SIMLAB_Virtual_Chemistry_Lab_Project/dist/
+!SIMLAB_Virtual_Chemistry_Lab_Project/dist/**
 dist-ssr
 *.local
 

@@ -1,0 +1,18 @@
+Teaching reaction demonstrations
+
+Scope: specific dilute aqueous reference mixtures; not a universal reaction predictor.
+Sugar + alkaline permanganate: carbonate demonstrations are observed purple to brown; strong NaOH permits purple, mixed blue, green manganate, then colloidal yellow/orange/brown MnO2. Half equations describe manganese only. Organic oxidation products and absolute kinetic constants are not assigned. The model requires a 10:1 or greater molar sugar excess and pH >=10. The pH charge balance is approximate; it is not a time-dependent reaction-equilibrium calculation. Timing and RGB shades are illustrative; sucrose is displayed more slowly. Stock concentrations are limited to 0–1 M. Very dark permanganate can obscure stages. Simulated stages should not be used as quantitative manganese speciation or sugar yields.
+
+References:
+University of Göttingen: Zucker ist nicht gleich Zucker (sugars, sodium carbonate, potassium permanganate; glucose faster than sucrose; purple to brown).
+https://unterrichtsmaterialien-chemie.uni-goettingen.de/exp_neu.php?id=1873
+Royal Society of Chemistry: chemical chameleon; blue is mixed purple and green, manganese half equations, colloidal MnO2 colour.
+https://edu.rsc.org/download?ac=523196
+ICIQ: Chameleon outreach demonstration.
+https://iciq.org/outreach/schools-and-high-schools/from-the-laboratory-to-the-classroom/chameleon/
+
+Volcano: CH3COOH + NaHCO3 -> CH3COONa + CO2 + H2O. Maximum stoichiometric gas is min(n_acid,n_bicarbonate), with ideal dry gas volume at 298.15 K and 1 atm. Actual released gas is affected by dissolution, equilibrium, temperature and mixing. Detergent stabilises foam; dye colours the liquid. Neutral detergent and trace dye are assumed nonreacting in this specific model. Geometry, timing and overflow are illustrative. The cone is a prop. No actual lava, rock or flame is produced. Fluid loss is not subtracted from the vessel inventory. Replays repeat the observation using original amounts and do not represent another reaction in exhausted contents.
+ACS Gas Sudsation:
+https://www.acs.org/education/whatischemistry/adventures-in-chemistry/experiments/gas-sudsation.html
+ACS volcano activity:
+https://www.acs.org/content/dam/acsorg/education/resources/k-8/science-activities/planetearth/land/volcano.pdf
