@@ -40,7 +40,8 @@ const dueLabel = (due: string | null, done: boolean) => {
 };
 
 const AdminTeam = () => {
-    const { token, user } = useAdminAuth();
+    const { token, user, can } = useAdminAuth();
+    const canPost = can("chat", "manage");
     const [params, setParams] = useSearchParams();
     const [channels, setChannels] = useState<ChannelInfo[]>([]);
     const [openTasks, setOpenTasks] = useState(0);
@@ -212,11 +213,11 @@ const AdminTeam = () => {
 
     return (
         <AdminLayout>
-            <div className="max-w-6xl mx-auto">
-                <div className="hidden lg:flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div className="h-full flex flex-col">
+                <div className="hidden lg:flex flex-wrap items-center justify-between gap-3 px-4 py-2 border-b shrink-0">
                     <div>
-                        <h1 className="text-2xl font-heading font-bold">Team Desk</h1>
-                        <p className="text-sm text-muted-foreground">Chat, mention and hand out tasks. New orders, registrations and abstracts appear here too.</p>
+                        <h1 className="text-lg font-heading font-bold">Team Desk</h1>
+                        <p className="text-xs text-muted-foreground">Chat, mention and hand out tasks. New orders, registrations and abstracts appear here too.</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {canInstall && <Button variant="outline" size="sm" onClick={install}><Download className="w-4 h-4" /> Install app</Button>}
@@ -224,14 +225,14 @@ const AdminTeam = () => {
                         {push.state === "on" && <Button variant="outline" size="sm" onClick={push.disable}><BellOff className="w-4 h-4" /> Notifications on</Button>}
                     </div>
                 </div>
-                <div className="hidden lg:block">
+                <div className="hidden lg:block px-4 empty:hidden">
                 {push.state === "blocked" && <p className="mb-3 text-sm rounded-lg bg-amber-50 border border-amber-200 p-3">Notifications are blocked for this site. Allow them in your browser's site settings to get alerts.</p>}
                 {push.state === "unconfigured" && <p className="mb-3 text-sm rounded-lg bg-gray-100 border p-3">Push alerts are not set up on the server yet. Ask the administrator to add the VAPID keys.</p>}
                 {push.error && <p className="mb-3 text-sm text-destructive">{push.error}</p>}
 
                 </div>
-                <div className="grid lg:grid-cols-[220px_minmax(0,1fr)] bg-white lg:border lg:rounded-xl overflow-hidden -mx-4 -mt-4 -mb-4 lg:m-0 h-[calc(100dvh-8.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] lg:h-[calc(100vh-190px)] lg:min-h-[480px]">
-                    <nav aria-label="Channels" className="hidden lg:flex lg:border-r bg-gray-50 p-2 flex-col gap-1 overflow-y-auto">
+                <div className="grid lg:grid-cols-[220px_minmax(0,1fr)] bg-white overflow-hidden flex-1 min-h-0">
+                    <nav aria-label="Channels" className="hidden lg:flex lg:border-r bg-gray-50 p-2 flex-col gap-1 overflow-y-auto no-scrollbar">
                         {channels.map((c) => (
                             <button
                                 key={c.id}
@@ -266,7 +267,7 @@ const AdminTeam = () => {
                                     <ListTodo className="w-4 h-4" /><span className="hidden sm:inline">Tasks</span>{tasks.filter((t) => t.status === "open").length > 0 && <span>({tasks.filter((t) => t.status === "open").length})</span>}
                                 </button>
                             </div>
-                            <Button size="sm" variant="outline" className="shrink-0" onClick={() => setTaskFor({ title: "", messageId: null })} aria-label="Assign task"><UserPlus className="w-4 h-4" /><span className="hidden sm:inline">Assign task</span></Button>
+                            {canPost && <Button size="sm" variant="outline" className="shrink-0" onClick={() => setTaskFor({ title: "", messageId: null })} aria-label="Assign task"><UserPlus className="w-4 h-4" /><span className="hidden sm:inline">Assign task</span></Button>}
                         </header>
 
                         {tab === "chat" ? (
@@ -274,7 +275,7 @@ const AdminTeam = () => {
                                 <div
                                     ref={feedRef}
                                     onScroll={(e) => { const el = e.currentTarget; stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}
-                                    className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4"
+                                    className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-4 space-y-4"
                                     aria-live="polite"
                                 >
                                     {messages.length === 0 && !error && <p className="text-sm text-muted-foreground text-center py-10">No messages yet. Say hello, or @mention a teammate.</p>}
@@ -293,7 +294,7 @@ const AdminTeam = () => {
                                                         <div className="mt-1 border border-l-4 border-l-amber-400 rounded-md p-3 max-w-xl bg-white">
                                                             <p className="text-sm break-words">{m.body}</p>
                                                             <div className="mt-2 flex flex-wrap gap-2">
-                                                                <Button size="sm" onClick={() => setTaskFor({ title: m.refLabel ? `Follow up: ${m.refLabel}` : m.body, messageId: m.id })}>Assign</Button>
+                                                                {canPost && <Button size="sm" onClick={() => setTaskFor({ title: m.refLabel ? `Follow up: ${m.refLabel}` : m.body, messageId: m.id })}>Assign</Button>}
                                                                 {link && <Button size="sm" variant="outline" asChild><a href={link}>Open record</a></Button>}
                                                             </div>
                                                         </div>
@@ -301,7 +302,7 @@ const AdminTeam = () => {
                                                         <p className="text-sm whitespace-pre-wrap break-words">{renderBody(m)}</p>
                                                     )}
                                                     {m.refType === "task" && <p className="text-xs text-muted-foreground mt-0.5">Task {m.taskStatus === "done" ? "done" : "open"}{m.taskAssigneeName ? ` · ${m.taskAssigneeName}` : ""}</p>}
-                                                    {!m.isEvent && m.refType !== "task" && !m.taskId && (
+                                                    {canPost && !m.isEvent && m.refType !== "task" && !m.taskId && (
                                                         <button onClick={() => setTaskFor({ title: m.body.slice(0, 120), messageId: m.id })} className="text-xs text-muted-foreground hover:text-primary mt-0.5">Make this a task</button>
                                                     )}
                                                     {m.taskId && m.refType !== "task" && <p className="text-xs text-primary mt-0.5">Task for {m.taskAssigneeName} · {m.taskStatus === "done" ? "done" : "open"}</p>}
@@ -310,7 +311,7 @@ const AdminTeam = () => {
                                         );
                                     })}
                                 </div>
-                                <form onSubmit={send} className="relative border-t p-3 flex gap-2">
+                                <form onSubmit={send} className={canPost ? "relative border-t p-3 flex gap-2" : "hidden"}>
                                     {suggestions.length > 0 && (
                                         <ul role="listbox" aria-label="Mention a teammate" className="absolute bottom-full left-3 mb-1 w-64 bg-white border rounded-lg shadow-lg py-1 z-10">
                                             {suggestions.map((p) => (
@@ -336,7 +337,7 @@ const AdminTeam = () => {
                                 {error && <p className="px-4 pb-3 text-sm text-destructive" role="alert">{error}</p>}
                             </>
                         ) : (
-                            <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
+                            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar p-4 space-y-6">
                                 <p className="text-sm text-muted-foreground">{openTasks > 0 ? `You have ${openTasks} open ${openTasks === 1 ? "task" : "tasks"} across all channels.` : "You have no open tasks."}</p>
                                 <TaskList title="Open" tasks={myOpen} me={user?.id} onToggle={(t) => setStatus(t, "done")} empty="Nothing open in this channel." />
                                 <TaskList title="Done" tasks={done} me={user?.id} onToggle={(t) => setStatus(t, "open")} empty="Nothing finished yet." />
@@ -352,7 +353,7 @@ const AdminTeam = () => {
                         <SheetTitle className="font-heading">Team Desk</SheetTitle>
                         <SheetDescription>{openTasks > 0 ? `You have ${openTasks} open ${openTasks === 1 ? "task" : "tasks"}.` : "Pick a channel."}</SheetDescription>
                     </SheetHeader>
-                    <nav aria-label="Channels" className="flex-1 overflow-y-auto p-2 space-y-1">
+                    <nav aria-label="Channels" className="flex-1 overflow-y-auto no-scrollbar p-2 space-y-1">
                         {channels.map((c) => (
                             <button key={c.id} onClick={() => go(c.id)} aria-current={c.id === channelId} className={`w-full flex items-center gap-3 px-3 py-3 rounded-lg text-left ${c.id === channelId ? "bg-primary text-primary-foreground font-semibold" : "hover:bg-gray-100"}`}>
                                 {c.restricted ? <Lock className="w-4 h-4 shrink-0" /> : <Hash className="w-4 h-4 shrink-0" />}

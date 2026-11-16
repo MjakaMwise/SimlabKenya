@@ -184,7 +184,7 @@ const App = () => (
               <Route
                 path="/admin/team"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute area="chat">
                     <AdminTeam />
                   </ProtectedRoute>
                 }

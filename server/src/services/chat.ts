@@ -24,7 +24,7 @@ export const CHANNELS: Channel[] = [
 export const channelById = (id: string) => CHANNELS.find((c) => c.id === id);
 
 export const canAccess = (user: Pick<Account, 'role' | 'permissions'> | undefined, ch: Channel): boolean => {
-  if (!user) return false;
+  if (!user || !can(user, 'chat', 'view')) return false;
   if (ch.area === null) return true;
   if (ch.area === 'admin') return user.role === 'admin';
   return can(user, ch.area, 'view');

@@ -144,7 +144,7 @@ const STATEMENTS = [
    )`,
   `CREATE INDEX IF NOT EXISTS email_log_created_idx ON email_log (created_at DESC)`,
   `CREATE INDEX IF NOT EXISTS email_log_batch_idx ON email_log (batch_id)`,
-  // WhatsApp inbox (OpenWA). phone holds digits only, country code first (254712345678).
+  // WhatsApp inbox. phone holds digits only, country code first (254712345678).
   `CREATE TABLE IF NOT EXISTS wa_conversations (
      id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
      phone                TEXT NOT NULL UNIQUE,
@@ -202,6 +202,14 @@ const STATEMENTS = [
   `INSERT INTO site_settings (key, value) VALUES ('wa_bot_hours', '{"enabled":false,"start":"08:00","end":"17:00","days":[1,2,3,4,5]}'::jsonb) ON CONFLICT (key) DO NOTHING`,
 ];
 
+// Team chat became a delegated area: staff who could use it before keep it, once. Later removals stick.
+const GRANT_CHAT = [
+  `CREATE TABLE IF NOT EXISTS app_flags (name TEXT PRIMARY KEY, set_at TIMESTAMPTZ NOT NULL DEFAULT now())`,
+  `WITH first_run AS (INSERT INTO app_flags (name) VALUES ('chat_permission_granted') ON CONFLICT DO NOTHING RETURNING 1)
+   UPDATE admin_users SET permissions = array_append(permissions, 'chat:manage')
+   WHERE role <> 'admin' AND EXISTS (SELECT 1 FROM first_run) AND NOT ('chat:manage' = ANY(permissions))`,
+];
+
 export const migrate = async (): Promise<void> => {
-  for (const sql of STATEMENTS) await pool.query(sql);
+  for (const sql of [...STATEMENTS, ...GRANT_CHAT]) await pool.query(sql);
 };
