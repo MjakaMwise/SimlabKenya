@@ -1,5 +1,5 @@
-// Staff are delegated access per area. "manage" includes "view". Admins can do everything.
-export const AREAS = ['orders', 'abstracts', 'shop', 'ocean', 'whatsapp', 'email'] as const;
+// Staff are delegated access per area (chat = the Team chat: view reads channels, manage posts and assigns tasks). "manage" includes "view". Admins can do everything.
+export const AREAS = ['orders', 'abstracts', 'shop', 'ocean', 'whatsapp', 'email', 'chat'] as const;
 export type Area = (typeof AREAS)[number];
 export type Level = 'view' | 'manage';
 
