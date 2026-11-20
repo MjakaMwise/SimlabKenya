@@ -1,8 +1,9 @@
 // Synthetic reference solutions: spectral parameters are educational, not certified data.
 const uvProfiles={uv:{name:'UV reference A · synthetic',peak:275,width:19,epsilon:12000,color:'#cebfea'},orange:{name:'Orange reference B · synthetic',peak:430,width:35,epsilon:18000,color:'#f2b55d'},blue:{name:'Blue reference C · synthetic',peak:630,width:42,epsilon:40000,color:'#6baed6'}};
 Object.assign(uvProfiles,{
-  drugParacetamol:{name:'Paracetamol · teaching profile',peak:243,width:15,epsilon:12000,color:'#e1f2ef'},
-  drugCaffeine:{name:'Caffeine · teaching profile',peak:271,width:17,epsilon:10500,color:'#e1f2ef'},
+  teacherUnknown:{name:'Teacher’s unknown · synthetic profile',peak:275,width:19,epsilon:12000,color:'#e1f2ef'},
+  drugParacetamol:{name:'Paracetamol · teaching profile',molarMass:151.16,peak:243,width:15,epsilon:12000,color:'#e1f2ef'},
+  drugCaffeine:{name:'Caffeine · teaching profile',molarMass:194.19,spectrumSource:'https://webbook.nist.gov/cgi/cbook.cgi?ID=C58082&Mask=400',peak:271,width:17,epsilon:10500,color:'#e1f2ef'},
   ionPhosphate:{name:'Orthophosphate · developed molybdenum blue',peak:650,width:36,epsilon:22000,color:'#6baed6'},
   ionNitrate:{name:'Nitrate · developed azo dye',peak:543,width:24,epsilon:28000,color:'#e795b7'},
   ionNitrite:{name:'Nitrite · developed azo dye',peak:543,width:24,epsilon:28000,color:'#e795b7'},
@@ -11,13 +12,79 @@ Object.assign(uvProfiles,{
 const uvDefault=()=>({power:false,ready:false,blank:null,wavelength:430,start:350,end:750,path:1,material:'quartz',solvent:'water',selected:'',loaded:null,vials:[],records:[],nextSpectrumId:1,overlayIds:null,peakChoice:null,scan:null,result:null,message:'Prepare samples, click Auto zero, then Run.',prep:{name:'Standard',type:'standard',profile:'orange',stock:100,aliquot:1,final:25,dilution:1}});
 let uv=uvDefault();try{const s=JSON.parse(localStorage.getItem('simlab-uv-v1'));if(s)uv={...uv,...s,power:false,ready:false,blank:null,loaded:null,message:'Saved samples and results restored. Click Auto zero before running.'};}catch{}
 let uvBusy=false,uvTimer=null,uvActiveRun=null;
-const uvScanDurationMs=30000;
+const uvScanDurationMs=30000
+const uvArchiveKey='simlab-uv-archive-v1';
+function uvArchives(){
+  const value=JSON.parse(localStorage.getItem(uvArchiveKey)||'[]');
+  if(!Array.isArray(value)) throw Error('Saved UV–Vis sessions could not be read.');
+  return value;
+}
+function uvSessionHasWork(){
+  const defaults=uvDefault();
+  return !!(uv.vials.length||uv.records.length||uv.scan||uv.blank||
+    ['start','end','wavelength','path','material','solvent','prep'].some(key=>JSON.stringify(uv[key])!==JSON.stringify(defaults[key])));
+}
+function uvSessionPanel(disabled){
+  let sessions=[];
+  try{sessions=uvArchives();}catch(error){return '<p class="notice">'+esc(error.message)+'</p>';}
+  return `<p>Saved sessions stay in this browser. They keep your samples, instrument settings, spectra and calibration data together.</p>
+    <label>Session name<input id="uvSessionName" maxlength="100" placeholder="Optional · defaults to the date and time" ${disabled}></label>
+    <div class="ch-actions"><button type="button" class="btn" data-uv-action="archive-new" ${disabled||(!uvSessionHasWork()?'disabled':'')}>Save &amp; start new</button>
+    <button type="button" class="btn secondary" data-uv-action="reset" ${disabled}>Start new without saving</button></div>
+    <h3>Saved sessions</h3>
+    ${sessions.length?'<div class="ch-scroll"><table class="ch-table"><thead><tr><th>Session</th><th>Saved</th><th>Samples / runs</th><th>Actions</th></tr></thead><tbody>'+sessions.map((entry,index)=>
+      '<tr><td>'+esc(entry.name)+'</td><td>'+esc(new Date(entry.saved).toLocaleString())+'</td><td>'+entry.state.vials.length+' / '+entry.state.records.length+'</td>'
+      +'<td><div class="ch-actions"><button type="button" class="btn secondary small" data-uv-session-action="restore" data-uv-session="'+index+'" '+disabled+'>Open</button>'
+      +'<button type="button" class="btn secondary small" data-uv-session-action="export" data-uv-session="'+index+'" '+(entry.state.records.length?'':'disabled')+'>Export CSV</button>'
+      +'<button type="button" class="btn secondary small" data-uv-session-action="delete" data-uv-session="'+index+'" '+disabled+'>Delete</button></div></td></tr>'
+    ).join('')+'</tbody></table></div>':'<p class="muted">No saved sessions yet.</p>'}`;
+}
+function uvArchiveAndReset(){
+  if(uvBusy||!uvSessionHasWork()) return;
+  try{
+    const saved=Date.now();
+    const name=document.getElementById('uvSessionName')?.value.trim()||'UV–Vis · '+new Date(saved).toLocaleString();
+    const state={...uv, power:false, ready:false, blank:null, loaded:null, scan:null, result:null};
+    localStorage.setItem(uvArchiveKey,JSON.stringify([{name,saved,state},...uvArchives()]));
+    uvResetSession('Saved “'+name+'”. The new session is empty. Prepare samples and click Auto zero.');
+  }catch{
+    uv.message='Could not save this session in browser storage. Your current work is still open. Export its run data or free space by deleting an older saved session.';
+    uvRefresh(false);
+  }
+}
+function uvArchiveAction(action,index){
+  if(uvBusy&&action!=='export') return;
+  try{
+    const sessions=uvArchives(), entry=sessions[index];
+    if(!entry) return;
+    if(action==='export'){
+      uvExportRecords(entry.state.records);
+    }else if(action==='delete'){
+      if(!window.confirm('Delete saved session “'+entry.name+'”?')) return;
+      sessions.splice(index,1);
+      localStorage.setItem(uvArchiveKey,JSON.stringify(sessions));
+      uv.message='Saved session deleted.';
+      uvRefresh(false);
+    }else if(action==='restore'){
+      if(uvSessionHasWork()&&!window.confirm('Opening this saved session replaces your current workspace. Continue?')) return;
+      const restored={...uvDefault(),...entry.state,power:false,ready:false,blank:null,loaded:null,scan:null,result:null,
+        message:'Opened “'+entry.name+'”. Auto zero before running more samples.'};
+      localStorage.setItem('simlab-uv-v1',JSON.stringify(restored));
+      uv=restored;
+      uvActiveTab='samples';
+      uvRefresh(false);
+    }
+  }catch{
+    uv.message='Could not complete the saved-session action. Your current work is still open.';
+    uvRefresh(false);
+  }
+};
 function uvSave(){try{localStorage.setItem('simlab-uv-v1',JSON.stringify(uv));}catch{}}
 function uvRefresh(save=true){if(save)uvSave();if(page==='uvvis')render();}
 function uvSignature(){return JSON.stringify([uv.path,uv.material,uv.solvent,uv.start,uv.end]);}
 function uvKey(profile){return JSON.stringify([profile,uv.wavelength,uv.path,uv.material,uv.solvent]);}
 function uvEpsilon(profile,w){const p=uvProfiles[profile];return p.epsilon*Math.exp(-.5*((w-p.peak)/p.width)**2);}
-function uvAbs(v,w){return uvEpsilon(v.profile,w)*uv.path*v.concentration*1e-6;}
+function uvAbs(v,w){const ideal=uvEpsilon(v.profile,w)*uv.path*v.concentration*1e-6;let seed=2166136261;for(const char of String(v.id||v.name)+'|'+String(v.measurementRun||0)+'|'+w)seed=Math.imul(seed^char.charCodeAt(0),16777619);seed^=seed>>>16;const fraction=(seed>>>0)/4294967295-.5;return ideal+fraction*(.001+.005*Math.abs(ideal));}
 function uvValidRange(a,b){return Number.isFinite(a)&&Number.isFinite(b)&&a>=200&&b<=900&&a<=b&&(uv.material==='quartz'||a>=350);}
 function uvFit(points){if(new Set(points.map(p=>p.concentration)).size<3)return null;const n=points.length,x=points.reduce((s,p)=>s+p.concentration,0)/n,y=points.reduce((s,p)=>s+p.a,0)/n;const xx=points.reduce((s,p)=>s+(p.concentration-x)**2,0),xy=points.reduce((s,p)=>s+(p.concentration-x)*(p.a-y),0);if(!xx)return null;const slope=xy/xx,intercept=y-slope*x,ss=points.reduce((s,p)=>s+(p.a-y)**2,0),err=points.reduce((s,p)=>s+(p.a-(slope*p.concentration+intercept))**2,0);return {slope,intercept,r2:ss?1-err/ss:1,min:Math.min(...points.map(p=>p.concentration)),max:Math.max(...points.map(p=>p.concentration))};}
 function uvSameCalibrationConditions(record,profile){
@@ -32,8 +99,9 @@ function uvRecordAbsorbance(record,wavelength){
   const lower=Math.floor(offset),upper=Math.ceil(offset);
   return spectrum.values[lower]+(spectrum.values[upper]-spectrum.values[lower])*(offset-lower);
 }
-function uvStandards(profile){
+function uvStandards(profile,method){
   return uv.records.filter(record=>record.type==='standard'&&uvSameCalibrationConditions(record,profile))
+    .filter(record=>!method||method.low===null||record.concentration>=method.low&&record.concentration<=method.high)
     .map(record=>({...record,a:uvRecordAbsorbance(record,uv.wavelength)}))
     .filter(record=>Number.isFinite(record.a)&&record.a>=0&&record.a<=2);
 }
@@ -83,13 +151,15 @@ function uvVisible(){
   const review=uvBusy?'':uvOverlayPanel();
   const prep=uv.prep;
   const profile=uv.loaded?.profile||prep.profile;
-  const standards=uvStandards(profile);
+  const standards=uvStandards(profile,uv.vials.find(item=>item.id===uv.selected&&item.profile===profile)?.practicalMethod);
   const fit=uvFit(standards);
   const calibrationPeak=uvCalibrationPeak(profile);
   const disabled=uvBusy?'disabled':'';
   const nm=(value,places=0)=>value==null?'—':value.toFixed(places);
   const vial=uv.loaded;
   const cellColour=uvProfiles[vial?.profile]?.color||'#e1f2ef';
+  const assignment=uv.vials.find(item=>item.id===uv.selected&&item.practicalMethod)||uv.vials.findLast(item=>item.practicalMethod);
+  const assignedVials=uv.vials.filter(item=>item.practicalMethod&&item.assignmentId===assignment?.assignmentId);
   const settings=`<div class="uv-optics" role="img" aria-label="Light travels from the lamps through the monochromator and cuvette to the detector">
     <span>☀<small>D₂ / tungsten lamps</small></span><b aria-hidden="true">→</b>
     <span>◈<small>Monochromator</small></span><b aria-hidden="true">→</b>
@@ -134,7 +204,7 @@ function uvVisible(){
     ${fit&&fit.slope<=1e-8?'<p class="notice">The absorbance response is too small at this wavelength. Choose a detected standard peak within the scan range.</p>':''}
     ${uvPlot(standards.map(record=>[record.concentration,record.a]),'Concentration / µM','Absorbance / A','#087e67',true,fit)}
     ${fit?`<p>Slope ${fit.slope.toFixed(6)} A/µM · R² ${fit.r2.toFixed(6)} · range ${fit.min.toFixed(2)}–${fit.max.toFixed(2)} µM</p>`:'<p>Run three or more distinct standard concentrations under the same conditions.</p>'}
-    <details><summary>Unknown answer key</summary>${uv.vials.filter(vial=>vial.type==='unknown').map(vial=>`<p>${esc(vial.name)} · ${nm(vial.concentration*vial.dilution,4)} µM before dilution</p>`).join('')}</details>`;
+    <details><summary>Unknown answer key</summary>${uv.vials.filter(vial=>vial.type==='unknown'&&!vial.practicalMethod).map(vial=>`<p>${esc(vial.name)} · ${nm(vial.concentration*vial.dilution,4)} µM before dilution</p>`).join('')}</details>`;
   return `${head('VIRTUAL INSTRUMENT','UV–Visible spectroscopy','Prepare samples, scan each spectrum in about 30 seconds, and quantify unknowns against measured standards.')}
     <section class="panel uv-panel uv-live">
       <div class="sectionhead"><h2>${review?'Spectrum review':'Live wavelength scan'}</h2><span class="statbadge">${uvBusy?'RUNNING':uv.blank===uvSignature()?'ZEROED':'AUTO ZERO REQUIRED'}</span></div>
@@ -142,6 +212,8 @@ function uvVisible(){
       <div class="ch-actions"><button class="btn secondary" data-uv-action="autozero" ${disabled}>Auto zero</button>
       <button class="btn secondary" id="uvBaselineOpen" type="button" ${disabled}>Baseline</button>
       <button class="btn" data-uv-action="${uvActiveRun?'stop':'run'}" ${!uvActiveRun&&(uvBusy||!queued.length)?'disabled':''}>${uvActiveRun?'Stop':'Run'+(queued.length?' ('+queued.length+')':'')}</button></div>
+      <div class="ch-actions uv-session-actions"><button type="button" class="btn secondary small" data-uv-action="archive-new" ${disabled||(!uvSessionHasWork()?'disabled':'')}>Save &amp; start new</button>
+      <button type="button" class="btn secondary small" data-uv-action="reset" ${disabled}>New session</button></div>
       <p class="notice" id="uvLiveStatus" role="status">${esc(uv.message)}</p>
       <dialog class="uv-baseline-dialog" id="uvBaselineDialog" aria-labelledby="uvBaselineTitle">
         <form id="uvBaselineForm">
@@ -158,6 +230,7 @@ function uvVisible(){
         </form>
       </dialog>
     </section>
+    ${assignment?`<section class="panel uv-panel"><h2>Assigned UV–Vis method</h2>${assignedVials.length>1?`<label>Assigned unknown<select id="uvAssignedVial" ${disabled}>${assignedVials.map(item=>`<option value="${item.id}" ${item===assignment?'selected':''}>${esc(item.name)}</option>`).join('')}</select></label>`:''}<p>${esc(assignment.name)} · ${esc(assignment.solvent)}. Prepare at least three standards in the matching solvent and run them before the unknown.${assignment.practicalMethod.low!==null?' Calibration range '+assignment.practicalMethod.low+'–'+assignment.practicalMethod.high+' µM.':''}</p><div class="ch-actions">${assignment.practicalMethod.wavelengths.map(w=>`<button class="btn secondary small" type="button" data-uv-assigned-wavelength="${w}" ${disabled}>${w} nm</button>`).join('')}</div></section>`:''}
     ${uvTabs([
       ['samples','Sample run table · '+queued.length+' selected',samples],
       ['prepare','Prepare samples',preparation],
@@ -165,11 +238,26 @@ function uvVisible(){
       ['results','Run data &amp; detected peaks · '+uv.records.length,data],
       ['calibration','Calibration &amp; unknowns',calibration],
       ['help','Run guide','<ol><li>Set the solvent and measurement wavelength in Instrument settings. Use Baseline to choose the scan range.</li><li>Prepare vials and check the rows to run.</li><li>Click Auto zero, then Run. Open Run data &amp; detected peaks to review the results.</li></ol><p>The reference profiles use synthetic Gaussian bands. The drug and inorganic profiles use published wavelengths and simulated absorbance. Inorganic vials represent colour-developed solutions. See Drugs &amp; organic analysis for source conditions.</p>'],
-      ['reset','Reset session','<p>Clear the sample table, all UV–Vis run data, spectra, calibration and settings on this device. Export your run data first if you want a copy.</p><button class="btn secondary" type="button" data-uv-action="reset">Clear UV–Vis session and start new</button>']
+      ['sessions','Saved sessions',uvSessionPanel(disabled)]
     ])}`;
 }
 function uvAddVial(v){if(uv.vials.length>=30)throw Error('Rack is full (30 vials). Reloading keeps saved vials.');v.id='uv'+Date.now()+Math.random().toString(36).slice(2,7);uv.vials.push(v);uv.selected=v.id;}
+function uvSelectAssignedVial(vial){
+  if(!vial?.practicalMethod)return;
+  const {wavelengths}=vial.practicalMethod,peak=uvProfiles[vial.profile].peak;
+  for(const item of uv.vials)item.queued=item===vial;
+  uv.selected=vial.id;uv.loaded={...vial};uv.solvent=vial.solvent;uv.material='quartz';
+  uv.prep.profile=vial.profile;uv.wavelength=wavelengths[0];
+  uv.start=Math.max(200,Math.min(peak,...wavelengths)-60);
+  uv.end=Math.min(900,Math.max(peak,...wavelengths)+60);
+  uv.blank=null;uv.result=null;
+  uv.message=vial.name+' selected. Auto zero and run the matching standards before measuring the unknown.';
+}
 function uvBind(){if(page!=='uvvis')return;uvBindOverlay();uvBindBaseline();
+  const assigned=document.getElementById('uvAssignedVial');
+  if(assigned)assigned.onchange=()=>{if(uvBusy)return;uvSelectAssignedVial(uv.vials.find(vial=>vial.id===assigned.value));uvRefresh();};
+  document.querySelectorAll('[data-uv-assigned-wavelength]').forEach(button=>button.onclick=()=>{if(uvBusy)return;uv.wavelength=Number(button.dataset.uvAssignedWavelength);uv.material='quartz';uv.result=null;uv.message='Measurement wavelength set to '+uv.wavelength+' nm.';uvRefresh();});
+  document.querySelectorAll('[data-uv-session-action]').forEach(button=>button.onclick=()=>uvArchiveAction(button.dataset.uvSessionAction,Number(button.dataset.uvSession)));
   document.querySelectorAll('[data-uv-delete-record]').forEach(button=>button.onclick=()=>uvDeleteRuns(Number(button.dataset.uvDeleteRecord)));document.querySelectorAll('[data-uv],[data-uv-prep]').forEach(el=>el.onchange=()=>{const k=el.dataset.uv||'prep.'+el.dataset.uvPrep;let val=el.type==='number'?Number(el.value):el.value;if(el.type==='number'&&(!Number.isFinite(val)||el.value.trim()===''||val<Number(el.min)||val>Number(el.max))){uv.message='Enter a finite value within the displayed input limits.';uvRefresh();return;}if(k.startsWith('prep.'))uv.prep[k.slice(5)]=val;else{uv[k]=val;uv.result=null;}uvRefresh();});uvBindTabs();
 document.querySelectorAll('[data-uv-queue]').forEach(control=>control.onchange=()=>{
   const vial=uv.vials.find(item=>item.id===control.dataset.uvQueue);
@@ -181,12 +269,13 @@ document.querySelectorAll('[data-uv-row]').forEach(button=>button.onclick=()=>{
   if(!vial||uvBusy)return;
   uv.selected=vial.id;
   if(button.dataset.uvRow==='load'){
+    if(vial.practicalMethod){uvSelectAssignedVial(vial);uvRefresh();return;}
     for(const item of uv.vials)item.queued=item===vial;
     uvAction('load');
   }else uvAction('remove');
 });document.querySelectorAll('[data-uv-action]').forEach(b=>b.onclick=()=>uvAction(b.dataset.uvAction));}
-function uvRecordCurrent(peaks=[],spectrum=null){const v=uv.loaded,a=v.type==='blank'?0:uvAbs(v,uv.wavelength),r={name:v.name,type:v.type,profile:v.profile,key:uvKey(v.profile),concentration:v.type==='standard'?v.concentration:null,a,wavelength:uv.wavelength,path:uv.path,solvent:uv.solvent,material:uv.material,calculated:null,peaks,note:'Measured against the solvent blank.',time:new Date().toISOString()};if(a>2)r.note='Above 2 A: dilute the sample and repeat. Excluded from calibration.';else if(v.type==='unknown'){const fit=uvFit(uvStandards(v.profile));if(!fit||fit.slope<=1e-8)r.note='A usable calibration with three distinct measured levels is required.';else{const c=(a-fit.intercept)/fit.slope;if(c<fit.min||c>fit.max)r.note='Outside the measured calibration range: prepare suitable standards or dilute and repeat.';else{r.calculated=c*v.dilution;r.note=`Cuvette concentration ${c.toFixed(4)} µM × prior dilution ${v.dilution} = original ${r.calculated.toFixed(4)} µM.`;}}}if(spectrum){r.spectrum=spectrum;r.spectrumId=uv.nextSpectrumId++;}uv.records.push(r);uv.records=uv.records.slice(-200);uv.result=r;uv.message=r.note;}
-function uvAction(action){if(action==='reset'){uvResetSession();return;}if(action==='stop'){uvStopRun();return;}if(action==='clear-runs'){uvDeleteRuns();return;}if(uvBusy&&action!=='export')return;try{if(action==='autozero')uvAutoZero();
+function uvRecordCurrent(peaks=[],spectrum=null){const v=uv.loaded,a=v.type==='blank'?0:uvAbs(v,uv.wavelength),r={practicalVial:v.id,name:v.name,type:v.type,profile:v.profile,key:uvKey(v.profile),concentration:v.type==='standard'?v.concentration:null,a,wavelength:uv.wavelength,path:uv.path,solvent:uv.solvent,material:uv.material,calculated:null,peaks,note:'Measured against the solvent blank.',time:new Date().toISOString()};if(a>2)r.note='Above 2 A: dilute the sample and repeat. Excluded from calibration.';else if(v.type==='unknown'){const method=v.practicalMethod;const standards=uvStandards(v.profile,method);const fit=uvFit(standards);if(!fit||fit.slope<=1e-8)r.note='A usable calibration with three distinct measured levels is required.';else{const c=(a-fit.intercept)/fit.slope;if(c<fit.min||c>fit.max)r.note='Outside the measured calibration range: prepare suitable standards or dilute and repeat.';else{r.calculated=c*v.dilution;r.note=`Cuvette concentration ${c.toFixed(4)} µM × prior dilution ${v.dilution} = original ${r.calculated.toFixed(4)} µM.`;}}}if(spectrum){r.spectrum=spectrum;r.spectrumId=uv.nextSpectrumId++;}uv.records.push(r);uv.records=uv.records.slice(-200);uv.result=r;uv.message=r.note;}
+function uvAction(action){if(action==='archive-new'){uvArchiveAndReset();return;}if(action==='reset'){if(!uvBusy&&(!uvSessionHasWork()||window.confirm('Start a fresh UV–Vis session without saving the current work?')))uvResetSession();return;}if(action==='stop'){uvStopRun();return;}if(action==='clear-runs'){uvDeleteRuns();return;}if(uvBusy&&action!=='export')return;try{if(action==='autozero')uvAutoZero();
 else if(action==='run')uvRunQueue();
 else if(action==='power'){uv.power=!uv.power;uv.ready=false;uv.blank=null;if(uv.power){uvBusy=true;uv.message='Lamp stabilization in progress (accelerated)…';uvTimer=setTimeout(()=>{uv.ready=true;uvBusy=false;uv.message='Lamps ready. Load solvent blank, then Blank / zero.';uvRefresh();},1600);}else uv.message='Instrument powered off.';}
 else if(action==='blank-vial'){uv.loaded={name:uv.solvent+' solvent blank',type:'blank',solvent:uv.solvent};uv.result=null;uv.message='Solvent blank loaded. Close the virtual holder by clicking Blank / zero.';}
@@ -195,11 +284,11 @@ else if(action==='prepare'){const p=uv.prep;if(!(p.stock>0&&p.aliquot>0&&p.final
 else if(action==='practice'){if(uv.vials.length>24)throw Error('Practice set needs six free vial positions.');const profile=uv.prep.profile,peak=uvProfiles[profile].peak;uv.wavelength=peak;uv.start=peak<350?Math.max(200,peak-50):peak>=750?peak-70:350;uv.end=peak<350?peak+80:peak>=750?Math.min(900,peak+70):750;uv.material='quartz';uv.path=1;for(const c of [2,5,10,15,20])uvAddVial({name:'Standard '+c+' µM',type:'standard',profile,concentration:c,solvent:uv.solvent,dilution:1});uvAddVial({name:'Unknown '+String.fromCharCode(65+Math.floor(Math.random()*26)),type:'unknown',profile,concentration:7+Math.random()*6,solvent:uv.solvent,dilution:1});uv.message='Practice vials ready. Auto zero, then click Run to measure the queued standards and unknown.';}
 else if(action==='remove'){const id=uv.selected;if(!uv.vials.some(v=>v.id===id))throw Error('Select a vial to remove.');uv.vials=uv.vials.filter(v=>v.id!==id);uv.selected='';if(uv.loaded?.id===id)uv.loaded=null;uv.message='Vial removed from rack. Notebook measurements retained.';}
 else if(action==='load'){const v=uv.vials.find(v=>v.id===uv.selected);if(!v)throw Error('Select a prepared vial.');uv.loaded={...v};uv.result=null;uv.message=v.name+' loaded into the holder.';}
-else if(action==='measure'){const error=uvCheck();if(error)throw Error(error);uvRecordCurrent();}
-else if(action==='scan'){const error=uvCheck(true);if(error)throw Error(error);if(uv.loaded.type==='blank')throw Error('Load a prepared sample for its spectrum.');const v={...uv.loaded},from=uv.start,to=uv.end;uv.scan={name:v.name,path:uv.path,solvent:uv.solvent,points:[]};uvBusy=true;let w=from;uvTimer=setInterval(()=>{for(let i=0;i<8&&w<=to;i++,w+=1)uv.scan.points.push([w,uvAbs(v,w)]);if(w>to){clearInterval(uvTimer);uvBusy=false;uv.message='Scan complete. Select the maximum wavelength, then measure standards at the same settings.';}uvRefresh();},45);}
+else if(action==='measure'){const error=uvCheck();if(error)throw Error(error);uv.loaded.measurementRun=Date.now()+Math.random();uvRecordCurrent();}
+else if(action==='scan'){const error=uvCheck(true);if(error)throw Error(error);if(uv.loaded.type==='blank')throw Error('Load a prepared sample for its spectrum.');const v={...uv.loaded,measurementRun:Date.now()+Math.random()},from=uv.start,to=uv.end;uv.loaded=v;uv.scan={name:v.name,path:uv.path,solvent:uv.solvent,points:[]};uvBusy=true;let w=from;uvTimer=setInterval(()=>{for(let i=0;i<8&&w<=to;i++,w+=1)uv.scan.points.push([w,uvAbs(v,w)]);if(w>to){clearInterval(uvTimer);uvBusy=false;uv.message='Scan complete. Select the maximum wavelength, then measure standards at the same settings.';}uvRefresh();},45);}
 else if(action==='calibration-peak'){const peak=uvCalibrationPeak(uv.loaded?.profile||uv.prep.profile);if(!peak)throw Error('Run a standard with a detectable peak in the scan range.');uv.wavelength=peak[0];uv.result=null;uv.message='Calibration wavelength set to '+peak[0]+' nm using saved standard scans.';}
 else if(action==='peak'){if(!uv.scan?.points.length||uvBusy)throw Error('Complete a wavelength scan first.');const peak=uv.scan.points.reduce((p,q)=>q[1]>p[1]?q:p);if(peak[1]<=0)throw Error('No absorbing peak found.');uv.wavelength=peak[0];uv.result=null;uv.message='Measurement wavelength set to '+peak[0]+' nm.';}
-else if(action==='export'){const rows=[['Vial','Role','Reference','Wavelength_nm','Path_cm','Solvent','Known_concentration_uM','Absorbance','Transmittance_percent','Original_unknown_uM','Peak_wavelengths_nm','Peak_absorbances_A','Note','Timestamp'],...uv.records.map(r=>[r.name,r.type,r.profile||'',r.wavelength,r.path,r.solvent,r.concentration??'',r.a,100*10**(-r.a),r.calculated??'',r.peaks?.map(peak=>peak[0]).join(' | ')||'',r.peaks?.map(peak=>peak[1]).join(' | ')||'',r.note,r.time])];const csv=rows.map(r=>r.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const link=document.createElement('a');link.href=url;link.download='SIMLAB-UV-Visible.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+else if(action==='export')uvExportRecords(uv.records);
 }catch(e){uv.message=e.message;}uvRefresh();}
 
 function uvAutoZero(){
@@ -220,8 +309,19 @@ function uvAutoZero(){
   uvTimer=setTimeout(zero,1600);
 }
 function uvDetectedPeaks(points){
-  return points.filter((point,index)=>index>0&&index<points.length-1&&point[1]>0&&
-    point[1]>points[index-1][1]&&point[1]>=points[index+1][1]);
+  if(points.length<5)return [];
+  const smoothed=points.map((_,index)=>{
+    const start=Math.max(0,index-2),end=Math.min(points.length,index+3);
+    return points.slice(start,end).reduce((sum,point)=>sum+point[1],0)/(end-start);
+  });
+  const candidates=[];
+  for(let index=1;index<smoothed.length-1;index++){
+    if(smoothed[index]>.002&&smoothed[index]>smoothed[index-1]&&smoothed[index]>=smoothed[index+1])candidates.push(index);
+  }
+  candidates.sort((a,b)=>smoothed[b]-smoothed[a]);
+  const selected=[];
+  for(const index of candidates)if(selected.every(other=>Math.abs(points[index][0]-points[other][0])>=12))selected.push(index);
+  return selected.sort((a,b)=>a-b).map(index=>points[index]);
 }
 function uvLivePlotHtml(){
   const label=uv.scan?esc(uv.scan.name)+' · '+esc(uv.scan.solvent):'The spectrum will appear here as a sample runs.';
@@ -254,7 +354,7 @@ function uvRunQueue(){
   uvActiveRun=run;
   function loadNext(){
     const vial=queue[index];
-    uv.loaded={...vial};
+    uv.loaded={...vial,measurementRun:Date.now()+Math.random()};
     uv.selected=vial.id;
     uv.scan={name:vial.name,path:uv.path,solvent:uv.solvent,points:[]};
     wavelength=uv.start;
@@ -377,7 +477,8 @@ function uvBindOverlay(){
     };
   });
 }
-function uvResetSession(){
+function uvExportRecords(records){const rows=[['Vial','Role','Reference','Wavelength_nm','Path_cm','Solvent','Known_concentration_uM','Absorbance','Transmittance_percent','Original_unknown_uM','Peak_wavelengths_nm','Peak_absorbances_A','Note','Timestamp'],...records.map(r=>[r.name,r.type,r.profile||'',r.wavelength,r.path,r.solvent,r.concentration??'',r.a,100*10**(-r.a),r.calculated??'',r.peaks?.map(peak=>peak[0]).join(' | ')||'',r.peaks?.map(peak=>peak[1]).join(' | ')||'',r.note,r.time])];const csv=rows.map(r=>r.map(x=>'"'+String(x).replaceAll('"','""')+'"').join(',')).join('\r\n');const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));const link=document.createElement('a');link.href=url;link.download='SIMLAB-UV-Visible.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+function uvResetSession(message='New UV–Vis session ready. Prepare samples, then click Auto zero.') {
   clearInterval(uvTimer);
   clearTimeout(uvTimer);
   uvTimer=null;
@@ -385,7 +486,7 @@ function uvResetSession(){
   uvActiveRun=null;
   uv=uvDefault();
   uvActiveTab='samples';
-  uv.message='New UV–Vis session ready. Prepare samples, then click Auto zero.';
+  uv.message=message;
   uvRefresh();
 }
 

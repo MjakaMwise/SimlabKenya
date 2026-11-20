@@ -20,17 +20,24 @@ Object.assign(ftirSamples,{
     [2985,25,.23,'Aliphatic C–H stretch'],[1740,20,.93,'Ester C=O stretch'],[1370,21,.25,'Methyl bending'],[1240,25,.61,'Ester C–O stretching region'],[1050,24,.45,'Ester C–O stretching region']]}
 });
 const ftirReference=sample=>'https://webbook.nist.gov/cgi/cbook.cgi?ID=C'+sample.cas+'&Mask=80';
-const ftirDefaults=()=>({sample:'ethanol',resolution:4,scans:16,display:'transmittance',runs:[],overlays:[],referenceColours:{}});
+const ftirDefaults=()=>({sample:'ethanol',resolution:4,scans:16,display:'transmittance',runs:[],activeRunId:null,overlays:[],referenceColours:{}});
 let ftir=ftirDefaults();
 try{
   const saved=JSON.parse(localStorage.getItem('simlab-ftir-v1')||'null');
-  if(saved)ftir={...ftir,...saved};
+  if(saved){
+    const hadRunPointer=Object.hasOwn(saved,'activeRunId');
+    ftir={...ftir,...saved};
+    ftir.runs=Array.isArray(ftir.runs)?ftir.runs:[];
+    ftir.runs.forEach((record,index)=>{if(!record.id)record.id='legacy-'+(index+1);});
+    if(!hadRunPointer)ftir.activeRunId=ftir.runs.at(-1)?.id||null;
+  }
 }catch{}
 let ftirBackground=null,ftirTimer=null,ftirProgress=0,ftirBusy='',ftirPeak=0;
-let ftirTab='sample',ftirView='sample';
-let ftirStatus='Collect a background with an empty, clean ATR crystal.';
+let ftirTab='sample',ftirView='sample',ftirLoadedSample=null;
+let ftirStatus='Collect a background, then load an ATR sample before acquisition.';
 const ftirKey=()=>String(ftir.resolution);
 function ftirSave(){try{localStorage.setItem('simlab-ftir-v1',JSON.stringify(ftir));}catch{}}
+function ftirCurrentRun(){return ftir.activeRunId?ftir.runs.find(record=>record.id===ftir.activeRunId)||null:null;}
 function ftirSpectrum(sample,resolution,scans,reference=false){
   const points=[];
   for(let wavenumber=4000;wavenumber>=650;wavenumber-=resolution){
@@ -103,14 +110,14 @@ function ftirOverlayLegend(run){
   return '<div class="ftir-overlay-legend" id="ftirOverlayLegend" aria-label="Spectrum legend">'+sample+refs+'</div>';
 }
 function ftirPage(){
-  const run=ftir.runs.at(-1),sample=ftirSamples[ftir.sample],peak=run?.peaks[ftirPeak];
+  const run=ftirCurrentRun(),sample=ftirSamples[ftir.sample],peak=run?.peaks[ftirPeak];
   const showBackground=ftirView==='background'&&ftirBackground;
   const references=`<div class="ftir-references"><h3>Reference spectrum overlays</h3>
         <p class="muted">Dashed traces are teaching references. Use the NIST links for experimental spectra.</p><button class="btn secondary small" type="button" data-ftir="overlay">View overlaid spectra</button>
         <div class="ftir-reference-list">${Object.entries(ftirSamples).map(([id,item])=>`<div><label><input type="checkbox" data-ftir-reference="${id}" ${ftir.overlays.includes(id)?'checked':''}><i style="border-color:${ftirReferenceColour(id)}"></i>${esc(item.name)}</label><input type="color" data-ftir-colour="${id}" value="${ftirReferenceColour(id)}" aria-label="${esc(item.name)} reference colour"><a href="${ftirReference(item)}" target="_blank" rel="noopener">NIST ↗</a></div>`).join('')}</div></div>`;
   return `${head('VIRTUAL INSTRUMENT','ATR–FTIR spectroscopy','Collect a background, acquire a spectrum, and compare characteristic infrared bands.')}
   <section class="panel uv-panel">
-    <div class="sectionhead"><h2>${showBackground?'Background · clean ATR crystal':ftir.overlays.length?'Overlaid spectra':run?'Spectrum · '+esc(ftirSamples[run.sample].name):'Infrared spectrum'}</h2><span class="statbadge" id="ftirStatusBadge">${ftirBusy?'ACQUIRING':ftirBackground?.key===ftirKey()?'BACKGROUND READY':'BACKGROUND REQUIRED'}</span></div>
+    <div class="sectionhead"><h2>${showBackground?'Background · clean ATR crystal':ftir.overlays.length?'Overlaid spectra':run?'Spectrum · '+esc(ftirSamples[run.sample].name):'Infrared spectrum'}</h2><span class="statbadge" id="ftirStatusBadge">${ftirBusy?'ACQUIRING':ftirLoadedSample===ftir.sample?'SAMPLE LOADED':ftirBackground?.key===ftirKey()?'BACKGROUND READY':'BACKGROUND REQUIRED'}</span></div>
     <div class="ftir-layout">
       <div><div id="ftirPlot">${showBackground?ftirBackgroundPlot():ftirPlot(run)}</div>
         ${showBackground?'':ftirOverlayLegend(run)}
@@ -124,7 +131,7 @@ function ftirPage(){
     </div>
     <div class="ch-actions"><button class="btn secondary" type="button" data-ftir="background" ${ftirBusy?'disabled':''}>Collect background</button>
     ${ftirBackground?`<button class="btn secondary" type="button" data-ftir="view" ${ftirBusy?'disabled':''}>${showBackground?'Show sample &amp; overlays':'Show background'}</button>`:''}
-    <button class="btn" type="button" data-ftir="${ftirBusy?'stop':'run'}">${ftirBusy?'Stop':'Run sample'}</button></div>
+    <button class="btn secondary" type="button" data-ftir="load" ${ftirBusy?'disabled':''}>${ftirLoadedSample===ftir.sample?'Sample loaded ✓':'Load selected sample'}</button><button class="btn" type="button" data-ftir="${ftirBusy?'stop':'run'}" ${!ftirBusy&&(ftirLoadedSample!==ftir.sample||ftirBackground?.key!==ftirKey())?'disabled':''}>${ftirBusy?'Stop':'Run sample'}</button>${run?`<button class="btn secondary" type="button" data-ftir="export" ${ftirBusy?'disabled':''}>Save data (CSV)</button><button class="btn secondary" type="button" data-ftir="new-run" ${ftirBusy?'disabled':''}>Start new run</button>`:''}</div>
     <p class="notice" id="ftirStatus" role="status">${esc(ftirStatus)}</p>
     <progress id="ftirProgress" max="100" value="${ftirProgress}" ${ftirBusy?'':'hidden'} aria-label="Acquisition progress"></progress>
   </section>
@@ -145,15 +152,20 @@ function ftirPage(){
   </section>
   <section class="uv-tab-panel" id="ftir-panel-references" role="tabpanel" aria-labelledby="ftir-tab-references" ${ftirTab==='references'?'':'hidden'}>${references}</section>
   <section class="uv-tab-panel" id="ftir-panel-notebook" role="tabpanel" aria-labelledby="ftir-tab-notebook" ${ftirTab==='notebook'?'':'hidden'}>
-    <div class="ch-actions"><button class="btn secondary small" data-ftir="export" ${run?'':'disabled'}>Export latest spectrum CSV</button>
-    <button class="btn secondary small" data-ftir="clear" ${run&&!ftirBusy?'':'disabled'}>Clear saved runs</button></div>
-    <div class="uv-table"><table class="table"><thead><tr><th>Sample</th><th>Resolution / cm⁻¹</th><th>Scans</th><th>Bands / cm⁻¹</th></tr></thead><tbody>
-      ${ftir.runs.slice().reverse().map(record=>`<tr><td>${ftirSamples[record.sample].name}</td><td>${record.resolution}</td><td>${record.scans}</td><td>${record.peaks.map(band=>band.wavenumber).join(', ')}</td></tr>`).join('')||'<tr><td colspan="4">No samples run yet.</td></tr>'}
+    <div class="ch-actions"><button class="btn secondary small" data-ftir="export" ${run?'':'disabled'}>Export selected spectrum CSV</button>
+    <button class="btn secondary small" data-ftir="clear" ${ftir.runs.length&&!ftirBusy?'':'disabled'}>Clear saved runs</button></div>
+    <div class="uv-table"><table class="table"><thead><tr><th>Sample</th><th>Resolution / cm⁻¹</th><th>Scans</th><th>Bands / cm⁻¹</th><th>Data</th></tr></thead><tbody>
+      ${ftir.runs.slice().reverse().map(record=>`<tr><td>${ftirSamples[record.sample].name}</td><td>${record.resolution}</td><td>${record.scans}</td><td>${record.peaks.map(band=>band.wavenumber).join(', ')}</td><td><button class="btn secondary small" type="button" data-ftir-show="${record.id}" ${run?.id===record.id?'disabled':''}>${run?.id===record.id?'Current':'View'}</button></td></tr>`).join('')||'<tr><td colspan="5">No samples run yet.</td></tr>'}
     </tbody></table></div></section></section>`;
 }
 function ftirRefresh(){ftirSave();if(page==='ftir')render();}
 function ftirAcquire(kind){
   if(ftirBusy)return;
+  if(kind==='run'&&ftirLoadedSample!==ftir.sample){
+    ftirStatus='Load the selected ATR sample onto the crystal before running it.';
+    ftirRefresh();
+    return;
+  }
   if(kind==='run'&&ftirBackground?.key!==ftirKey()){
     ftirStatus='Collect a background with the current resolution before running a sample.';
     ftirRefresh();
@@ -182,8 +194,10 @@ function ftirAcquire(kind){
       ftirStatus='Background ready. The clean crystal trace is displayed. Select a sample and run.';
     }else{
       const points=ftirSpectrum(ftirSamples[sample],resolution,scans);
-      ftir.runs.push({sample,resolution,scans,points,peaks:ftirPeaks(ftirSamples[sample],points)});
+      const record={id:'ftir-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,8),sample,resolution,scans,acquiredAt:new Date().toISOString(),points,peaks:ftirPeaks(ftirSamples[sample],points)};
+      ftir.runs.push(record);
       ftir.runs=ftir.runs.slice(-30);
+      ftir.activeRunId=record.id;
       ftirPeak=0;
       ftirStatus='Spectrum ready. Select a characteristic band to inspect it.';
     }
@@ -191,12 +205,14 @@ function ftirAcquire(kind){
   },100);
 }
 function ftirExport(){
-  const run=ftir.runs.at(-1);
+  const run=ftirCurrentRun();
   if(!run)return;
   const csv=['Wavenumber_cm-1,Absorbance,Transmittance_percent',...run.points.map(([w,a])=>[w,a,(100*10**(-a)).toFixed(4)].join(','))].join('\r\n');
   const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  const link=document.createElement('a');link.href=url;link.download='SIMLAB-FTIR-'+run.sample+'.csv';link.click();
+  const stamp=(run.acquiredAt||new Date().toISOString()).replace(/[:.]/g,'-');
+  const link=document.createElement('a');link.href=url;link.download='SIMLAB-FTIR-'+run.sample+'-'+stamp+'.csv';link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+  ftirStatus='Spectrum CSV downloaded. The run also remains in the Acquisition notebook on this device.';ftirRefresh();
 }
 function ftirBind(){
   if(page!=='ftir')return;
@@ -236,29 +252,37 @@ function ftirBind(){
     const swatch=control.parentElement.querySelector('label i');
     if(swatch)swatch.style.borderColor=control.value;
     if(ftirView!=='background'||!ftirBackground){
-      const run=ftir.runs.at(-1);
+      const run=ftirCurrentRun();
       document.getElementById('ftirPlot').innerHTML=ftirPlot(run);
       const legend=document.getElementById('ftirOverlayLegend');
       if(legend)legend.outerHTML=ftirOverlayLegend(run);
     }
   });
   const bind=(id,callback)=>{const node=document.getElementById(id);if(node)node.onchange=()=>callback(node.value);};
-  bind('ftirSample',value=>{ftir.sample=value;ftirRefresh();});
+  bind('ftirSample',value=>{ftir.sample=value;ftirLoadedSample=null;ftirStatus='Sample changed. Load the selected ATR sample before acquisition.';ftirRefresh();});
   bind('ftirResolution',value=>{ftir.resolution=Number(value);ftirBackground=null;ftirStatus='Resolution changed. Collect a new background.';ftirRefresh();});
   bind('ftirScans',value=>{ftir.scans=Number(value);ftirRefresh();});
   bind('ftirDisplay',value=>{ftir.display=value;ftirRefresh();});
   bind('ftirPeak',value=>{ftirPeak=Number(value);ftirRefresh();document.getElementById('ftirPeak')?.focus();});
+  document.querySelectorAll('[data-ftir-show]').forEach(button=>button.onclick=()=>{
+    const record=ftir.runs.find(item=>item.id===button.dataset.ftirShow);
+    if(!record)return;
+    ftir.activeRunId=record.id;ftir.sample=record.sample;ftir.resolution=record.resolution;ftir.scans=record.scans;ftirPeak=0;ftirLoadedSample=null;ftirView='sample';ftirTab='sample';
+    ftirStatus='Saved spectrum loaded from the Acquisition notebook.';ftirRefresh();
+  });
   document.querySelectorAll('[data-ftir]').forEach(button=>button.onclick=()=>{
     const action=button.dataset.ftir;
     if(action==='overlay'){ftirView='sample';ftirTab='references';ftirRefresh();document.getElementById('ftirPlot')?.scrollIntoView({block:'nearest'});return;}
     if(action==='view'&&!ftirBusy){ftirView=ftirView==='background'?'sample':'background';ftirRefresh();return;}
     if(action==='background'||action==='run'){ftirAcquire(action);return;}
+    if(action==='new-run'&&!ftirBusy){ftir.activeRunId=null;ftirLoadedSample=null;ftirPeak=0;ftirView='sample';ftirStatus='Ready for a new run. Earlier spectra remain saved in the Acquisition notebook.';ftirRefresh();return;}
+    if(action==='load'){if(!ftirSamples[ftir.sample])return;ftirLoadedSample=ftir.sample;ftirStatus=ftirSamples[ftir.sample].name+' loaded on the ATR crystal. Collect a matching background, then run the sample.';ftirRefresh();return;}
     if(action==='stop'){
       clearInterval(ftirTimer);ftirTimer=null;ftirBusy='';ftirProgress=0;
       ftirStatus='Acquisition stopped. Completed spectra are kept.';ftirRefresh();
     }else if(action==='export')ftirExport();
     else if(action==='clear'&&!ftirBusy&&window.confirm('Delete all saved FTIR runs?')){
-      ftir.runs=[];ftirPeak=0;ftirStatus='FTIR notebook cleared.';ftirRefresh();
+      ftir.runs=[];ftir.activeRunId=null;ftirPeak=0;ftirStatus='FTIR notebook cleared.';ftirRefresh();
     }
   });
 }

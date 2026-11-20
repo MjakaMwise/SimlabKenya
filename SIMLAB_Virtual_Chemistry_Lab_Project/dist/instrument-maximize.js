@@ -3,9 +3,9 @@
   const style=document.createElement('style');
   style.textContent=`body.instrument-maximized .app{grid-template-columns:1fr}body.instrument-maximized .sidebar{display:none}body.instrument-maximized .content{max-width:none;padding:24px}body.instrument-maximized .topbar{padding:0 24px}#instrumentMaximize{white-space:nowrap}body.instrument-maximized .pagehead{flex-wrap:wrap;gap:12px}@media(max-width:600px){body.instrument-maximized .content{padding:14px}body.instrument-maximized .topbar{padding:0 14px}#instrumentMaximize{padding:8px;font-size:11px}}`;
   document.head.append(style);
-  const button=document.createElement('button');
+  const button=document.querySelector('#instrumentMaximize')||document.createElement('button');
   button.id='instrumentMaximize';button.type='button';button.className='btn secondary small';
-  document.querySelector('.topright').prepend(button);
+  const initialHost=document.querySelector('.topright');if(initialHost&&button.parentElement!==initialHost)initialHost.prepend(button);
   let expanded=false,ownsFullscreen=false;
   function paint(){
     button.textContent=expanded?'↙ Restore window':'⛶ Maximize workbench';
@@ -24,7 +24,7 @@
   });
   document.addEventListener('fullscreenchange',()=>{if(ownsFullscreen&&!document.fullscreenElement){ownsFullscreen=false;expanded=false;paint();}});
   document.addEventListener('keydown',e=>{if(e.key==='Escape'&&expanded)restore();});
-  function sync(){const available=['instrumentation','massspec','uvvis'].includes(page);button.hidden=!available;if(!available&&expanded)restore();}
-  new MutationObserver(sync).observe(document.querySelector('#crumb'),{childList:true,subtree:true});
+  function sync(){const host=document.querySelector('.topright');if(host&&button.parentElement!==host)host.prepend(button);button.hidden=false;}
+  new MutationObserver(sync).observe(document.body,{childList:true,subtree:true});
   paint();sync();
 })();

@@ -1,0 +1,112 @@
+.practical-panel{padding:clamp(16px,3vw,30px);display:grid;gap:16px}
+.practical-onboarding{max-width:680px;padding:clamp(16px,3vw,24px);border:1px solid #a0b9ac70;border-radius:12px;display:grid;gap:12px}
+.practical-onboarding h2,.practical-onboarding p{margin:0}
+.practical-onboarding>.btn{justify-self:start}
+.practical-panel [hidden]{display:none}
+.practical-panel hr{width:100%;border:0;border-top:1px solid #a0b9ac70}
+.practical-form,.practical-panel label{display:grid;gap:7px}
+.practical-form{gap:16px}
+.practical-form>.btn,.practical-panel>a{justify-self:start}
+.practical-panel :is(input,textarea,select){width:100%;min-width:0;font:inherit;color:inherit;background:var(--paper,#fff);border:1px solid #8fa79b;border-radius:8px;padding:8px 10px}
+.practical-panel textarea{resize:vertical}
+.practical-panel fieldset{min-width:0;border:1px solid #a0b9ac70;border-radius:10px;padding:12px}
+.practical-panel legend{padding:0 6px;font-weight:700}
+.practical-heading,.practical-actions,.practical-banner{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.practical-actions{justify-content:flex-start}
+.practical-banner{margin-bottom:14px}
+.practical-grid,.practical-component{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:10px}
+.practical-component{align-items:end;margin:10px 0}
+.practical-panel pre,.practical-print{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}
+.practical-panel pre{padding:12px;background:#90ab9f19;border-radius:8px}
+.practical-panel td{vertical-align:top}
+.practical-panel td pre{min-width:min(320px,60vw);max-width:520px}
+.practical-print{display:none}
+#physicalQuestionValues>p{margin:0}
+#physicalQuestionValues [data-physical-fields]{display:grid;gap:10px}
+#physicalQuestionValues [data-physical-fields][hidden]{display:none}
+.physical-reading-pair{display:grid;gap:8px;background:#f7faf8}
+.physical-reading-pair .practical-grid{align-items:end}
+.physical-given-values{margin:12px 0;padding:12px;border:1px solid #a0b9ac70;border-radius:10px;background:#f7faf8}
+.physical-given-values h3{margin:0 0 8px}
+.physical-given-values .table{width:100%;border-collapse:collapse}
+.physical-given-values th,.physical-given-values td{padding:7px;border-bottom:1px solid #a0b9ac70;text-align:left}
+.physical-given-values tr:last-child>*{border-bottom:0}
+.physical-given-values th{white-space:nowrap}
+@media print{
+  body:has(.practical-print)>:not(.practical-print){display:none!important}
+  body:has(.practical-print){display:block!important;background:white;color:black}
+  .practical-print{display:block;padding:15mm}
+}
+.practical-import{border:1px solid #a0b9ac70;border-radius:10px;padding:12px}
+.practical-import .practical-actions,.practical-import .practical-grid{margin-top:10px}
+.practical-import [data-import-custom]{margin-top:12px}
+.practical-tabs{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.practical-tabs button{padding:8px 12px;border:1px solid #8fa79b;border-radius:8px;background:transparent;color:inherit;font:inherit;font-weight:650}
+.practical-tabs button[aria-selected="true"]{background:#0d624f;border-color:#0d624f;color:white}
+.practical-tabs button:focus-visible{outline:2px solid #127a64;outline-offset:3px}
+.practical-panel [data-teacher-panel]{display:grid;gap:14px;min-width:0}
+.practical-panel [data-teacher-panel][hidden]{display:none}
+.practical-panel [data-teacher-panel]>.btn{justify-self:start}
+.practical-panel>p[data-practical-status]:empty{display:none}
+.practical-link{display:flex;align-items:end;gap:8px;flex-wrap:wrap;margin:6px 0}
+.practical-link label{flex:1;min-width:min(100%,210px)}
+.practical-link input{width:100%;min-width:0}
+.practical-email-action{display:flex;align-items:end;gap:8px;flex-wrap:wrap;min-width:min(100%,260px);max-width:100%}
+.practical-email-action label{flex:1;min-width:190px}
+.practical-email-action input{width:100%;min-width:0}
+.practical-email-action [data-email-status]{flex-basis:100%;font-size:12px}
+.practical-email-recipient{align-self:center;font-size:13px;overflow-wrap:anywhere}
+.practical-question-card{border:1px solid #a0b9ac70;border-radius:10px;padding:14px;display:grid;gap:10px;margin:12px 0}.practical-question-card h3{margin:0}.practical-review{border:1px solid #a0b9ac70;border-radius:10px;padding:14px}.practical-submission{margin:8px 0 8px 12px}
+.teacher-physical-answer{display:grid;gap:9px;margin-top:12px;padding:12px;border:1px solid #c9d9ce;border-radius:10px;background:#f2f7f3}
+.teacher-physical-answer h3,.teacher-physical-answer h4,.teacher-physical-answer p{margin:0}
+.teacher-physical-answer p{font-size:11px;line-height:1.45;color:#637469}
+.teacher-physical-answer label{max-width:420px}
+.teacher-physical-answer [data-physical-answer-output]{padding:9px;background:#fff;border-radius:8px}
+.teacher-physical-answer [data-physical-answer-output]:empty{display:none}
+.teacher-physical-answer .table{width:100%;border-collapse:collapse}
+.teacher-physical-answer th,.teacher-physical-answer td{padding:7px;text-align:left;border-bottom:1px solid #e1e9e3}
+.teacher-roster-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px;align-items:start}
+.teacher-roster-tools form,.teacher-roster-list{display:grid;gap:12px;padding:14px;border:1px solid #a0b9ac70;border-radius:10px;background:#f8fbf9}
+.teacher-roster-tools form>.btn{justify-self:start}
+.teacher-roster-list h3{margin:0}
+.teacher-roster-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:7px}
+.teacher-roster-check{display:flex!important;align-items:center;gap:9px!important;padding:9px 10px;border:1px solid #a0b9ac70;border-radius:8px;background:#fff}
+.teacher-roster-check input{width:17px!important;height:17px;flex:0 0 auto}
+.teacher-roster-check span{display:grid;gap:2px}
+.teacher-roster-check small{color:#637469}
+.teacher-roster-select-all{grid-column:1/-1;background:#f2f7f3;font-weight:700}
+.teacher-roster-move{display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-top:12px}
+.teacher-roster-move label{flex:1;min-width:200px}
+.teacher-roster-add-one{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));align-items:end;gap:10px;padding:12px;border:1px solid #a0b9ac70;border-radius:9px;background:#fff}
+.teacher-roster-add-one>.btn{justify-self:start}
+.teacher-roster-count{margin:0;color:#637469;font-size:.92em}
+.teacher-roster-table-wrap{width:100%;overflow-x:auto;border:1px solid #a0b9ac70;border-radius:9px;background:#fff}
+.teacher-roster-edit-table{width:100%;min-width:760px;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.teacher-roster-edit-table th,.teacher-roster-edit-table td{padding:7px 9px;border-right:1px solid #e1e9e3;border-bottom:1px solid #dce7e0;text-align:left;vertical-align:middle}
+.teacher-roster-edit-table th:last-child,.teacher-roster-edit-table td:last-child{border-right:0}
+.teacher-roster-edit-table th{background:#f2f7f3;font-size:.9em;white-space:nowrap}
+.teacher-roster-edit-table tbody tr:last-child td{border-bottom:0}
+.teacher-roster-edit-table tbody tr:hover{background:#f7faf8}
+.teacher-roster-edit-table td input:not([type=checkbox]){min-width:150px;padding:7px 8px;border-color:#dce7e0;background:#fff}
+.teacher-roster-edit-table td input[type=checkbox]{width:18px;min-width:18px;height:18px;padding:0}
+.teacher-roster-row-number{width:36px;color:#637469;text-align:center!important}
+.teacher-assignment-roster{display:grid;gap:10px}
+.teacher-assignment-roster>p{margin:0}
+.teacher-assignment-roster [data-assignment-students]{max-height:260px;overflow:auto}
+.teacher-aas-form,.teacher-aas-review{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,210px),1fr));align-items:end;gap:12px;padding:16px;border:1px solid #a0b9ac70;border-radius:10px;background:#f8fbf9}
+.teacher-aas-form [data-aas-teacher-range],.teacher-aas-review h3,.teacher-aas-review label{grid-column:1/-1}
+.teacher-aas-form>.btn,.teacher-aas-review>.btn{justify-self:start}
+.teacher-aas-tools{display:grid;gap:12px;margin-top:14px;padding:10px;border:1px solid #a0b9ac70;border-radius:9px;background:#f8fbf9}
+.teacher-aas-tools>summary{cursor:pointer;font-weight:700}
+.teacher-aas-element-row{display:grid;grid-template-columns:minmax(180px,1fr) minmax(180px,1fr) auto;gap:10px;align-items:end;margin:10px 0;padding:12px;border:1px solid #a0b9ac70;border-radius:9px;background:#fff}
+.teacher-aas-element-row [data-practical-aas-range]{grid-column:1/-1;margin:0}
+.teacher-aas-element-row [data-remove-aas-element]{justify-self:start}
+.teacher-aas-assignment [data-assignment-link]{overflow-wrap:anywhere;font-size:12px}
+.teacher-aas-assignments{display:grid;gap:10px;margin-top:16px}
+.teacher-aas-assignments h3,.teacher-aas-review h3{margin:0}
+.teacher-aas-assignment,.teacher-aas-review-item{display:grid;gap:8px;padding:12px;border:1px solid #a0b9ac70;border-radius:9px;background:#fff}
+.teacher-aas-assignment summary{cursor:pointer;font-weight:700}
+.teacher-aas-assignment textarea{font-family:ui-monospace,SFMono-Regular,monospace}
+.teacher-aas-assignment>.btn{justify-self:start}
+.teacher-aas-review-item span,.teacher-aas-review-item small{color:#637469}
+@media(max-width:600px){.teacher-aas-element-row{grid-template-columns:1fr}.teacher-aas-element-row [data-practical-aas-range]{grid-column:auto}}

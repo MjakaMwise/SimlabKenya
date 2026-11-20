@@ -1,0 +1,1 @@
+{"version":"7","dialect":"sqlite","entries":[{"idx":0,"version":"6","when":1794096000000,"tag":"0000_teachers_bench","breakpoints":true},{"idx":1,"version":"6","when":1794096001000,"tag":"0001_teacher_passwords","breakpoints":true},{"idx":2,"version":"6","when":1794225065000,"tag":"0002_teacher_accounts","breakpoints":true}]}

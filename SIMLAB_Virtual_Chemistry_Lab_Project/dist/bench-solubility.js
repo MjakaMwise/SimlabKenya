@@ -26,6 +26,23 @@ const solubilityColours = {
   'Cu(OH)2':'#97c7e4','Fe(OH)2':'#a1b994','Fe(OH)3':'#9d583b','Mg(OH)2':'#f2f0e8'
 };
 
+const solubilityAtomicMasses = {H:1.008,Li:6.94,C:12.011,N:14.007,O:15.999,Na:22.990,Mg:24.305,Al:26.982,
+  P:30.974,S:32.06,Cl:35.45,K:39.098,Ca:40.078,Cr:51.996,Mn:54.938,Fe:55.845,Co:58.933,Ni:58.693,
+  Cu:63.546,Zn:65.38,Br:79.904,Sr:87.62,Ag:107.868,I:126.904,Cs:132.905,Ba:137.327,Rb:85.468,
+  Pb:207.2,Hg:200.592};
+function solubilityFormulaMass(formula) {
+  const normalized=String(formula||'').replace(/[₀-₉]/g,digit=>'₀₁₂₃₄₅₆₇₈₉'.indexOf(digit)).replace(/\s+/g,'');
+  const tokens=normalized.match(/[A-Z][a-z]?|\d+|[()]/g)||[];
+  if(tokens.join('')!==normalized||!tokens.length)return null;
+  let index=0,valid=true;
+  const group=()=>{let mass=0;while(index<tokens.length&&tokens[index]!==')'){
+    if(tokens[index]==='('){index++;const nested=group();if(tokens[index]!==')'){valid=false;return mass;}index++;const multiplier=/^\d+$/.test(tokens[index]||'')?Number(tokens[index++]):1;mass+=nested*multiplier;continue;}
+    const element=tokens[index++];if(!(element in solubilityAtomicMasses)){valid=false;return mass;}
+    const count=/^\d+$/.test(tokens[index]||'')?Number(tokens[index++]):1;mass+=solubilityAtomicMasses[element]*count;
+  }return mass;};
+  const mass=group();return valid&&index===tokens.length?mass:null;
+}
+
 function solubilityFormulaKey(value) {
   const normalized = String(value).replace(/[₀-₉]/g, digit => '₀₁₂₃₄₅₆₇₈₉'.indexOf(digit)).replace(/\s+/g,'');
   const expanded = normalized.replace(/\(((?:[A-Z][a-z]?\d*)+)\)(\d+)/g, (_, group, count) =>
@@ -120,10 +137,28 @@ function solubilityImportedPrediction(items,conditions) {
   const solid=solids[0], colour=solubilityColours[solid.formula]||'#cbd4d8';
   const ion=(formula,charge,count)=> (count===1?'':count+' ')+formula+'^'+(Math.abs(charge)===1?'':Math.abs(charge))+(charge>0?'+':'−')+'(aq)';
   const other=crosses.find(salt=>salt!==solid);
+  const cationMoles=(cations.get(solid.cation)||0)*volume,anionMoles=(anions.get(solid.anion)||0)*volume,
+    maximumMoles=Math.min(cationMoles/solid.c,anionMoles/solid.a),
+    molarMass=solubilityFormulaMass(solid.formula);
+  let precipitateMoles=maximumMoles,basis='Stoichiometric maximum; assumes complete precipitation because no Ksp value is available for this solid.';
+  if(Number.isFinite(solid.ksp)){
+    let low=0,high=maximumMoles;
+    const ionProductAt=extent=>Math.max(0,(cationMoles-solid.c*extent)/volume)**solid.c*
+      Math.max(0,(anionMoles-solid.a*extent)/volume)**solid.a;
+    for(let i=0;i<90;i++){const mid=(low+high)/2;if(ionProductAt(mid)>solid.ksp)low=mid;else high=mid;}
+    precipitateMoles=(low+high)/2;
+    basis=`Estimated equilibrium amount from the listed Ksp (${solid.ksp.toExponential(2)}) at 25 °C; ideal concentrations, no activity correction.`;
+  }
+  const limiting= cationMoles/solid.c<=anionMoles/solid.a ? solid.cation+' ion' : solid.anion+' ion';
+  const precipitateQuantitation=molarMass&&precipitateMoles>0?{available:true,formula:solid.formula,molarMass,moles:precipitateMoles,
+    mass:precipitateMoles*molarMass,basis,limiting,reactants:[
+      {type:solid.cation+' ion',coefficient:solid.c,moles:cationMoles},
+      {type:solid.anion+' ion',coefficient:solid.a,moles:anionMoles}
+    ]}:null;
   return {...base,product:solid.formula+(solid.ksp?' precipitate':' possible precipitate'),
     equation:ion(solid.cation.split(':')[0],solubilityCations[solid.cation],solid.c)+' + '+ion(solid.anion,-solubilityAnions[solid.anion],solid.a)+' → '+solid.formula+'(s)',
     note:solid.formula+' is '+solid.rule+'. '+(solid.ksp?'After mixing, the estimated ion product exceeds Ksp. ':'The general rule flags a possible solid. Exact onset and yield are unavailable. ')+
       (other.rule==='soluble'?'The ions in '+other.formula+' remain aqueous. ':'The other ion pair, '+other.formula+', is below its saturation threshold. ')+
       (!solubilityColours[solid.formula]?'The solid is drawn in a neutral tint because its colour is not assigned.':''),
-    color:colour,precipitate:true,precipitateColor:colour,status:'qualitative'};
+    color:colour,precipitate:true,precipitateColor:colour,status:'qualitative',precipitateQuantitation};
 }
