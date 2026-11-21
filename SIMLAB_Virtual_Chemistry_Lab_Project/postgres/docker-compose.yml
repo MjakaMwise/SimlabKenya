@@ -1,0 +1,25 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-simlab}
+      POSTGRES_USER: ${POSTGRES_USER:-simlab_app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in postgres/.env}
+    ports:
+      # Keep PostgreSQL private on this server. Expose it only if you have a
+      # specific remote-access requirement and have configured a firewall/TLS.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - simlab_postgres_data:/var/lib/postgresql/data
+      - ./001_schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  simlab_postgres_data:
